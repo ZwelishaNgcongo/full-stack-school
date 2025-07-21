@@ -13,7 +13,7 @@ model Admin {
 }
 
 model Student {
-  id          String       @id
+  id          String       @id 
   username    String       @unique
   name        String
   surname     String
@@ -21,7 +21,7 @@ model Student {
   phone       String?      @unique
   address     String
   img         String?
-  bloodType   String
+  password String
   sex         UserSex
   createdAt   DateTime     @default(now())
   parentId    String
@@ -36,7 +36,7 @@ model Student {
 }
 
 model Teacher {
-  id        String    @id
+  id        String    @id @default(cuid())
   username  String    @unique
   name      String
   surname   String
@@ -44,14 +44,16 @@ model Teacher {
   phone     String?   @unique
   address   String
   img       String?
-  bloodType String
+  password  String
+
   sex       UserSex
   createdAt DateTime  @default(now())
-  subjects  Subject[]
+  subjects  Subject[] @relation("SubjectTeachers")
   lessons   Lesson[]
   classes   Class[]
   birthday  DateTime
 }
+
 
 model Parent {
   id        String    @id
@@ -91,9 +93,10 @@ model Class {
 model Subject {
   id       Int       @id @default(autoincrement())
   name     String    @unique
-  teachers Teacher[]
+  teachers Teacher[] @relation("SubjectTeachers")
   lessons  Lesson[]
 }
+
 
 model Lesson {
   id        Int      @id @default(autoincrement())

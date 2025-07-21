@@ -6,7 +6,11 @@ import prisma from "@/lib/prisma";
 import { ITEM_PER_PAGE } from "@/lib/settings";
 import { Prisma, Subject, Teacher } from "@prisma/client";
 import Image from "next/image";
-import { auth } from "@clerk/nextjs/server";
+
+// Mock auth to remove Clerk dependency
+async function getCurrentUser(): Promise<{ role: "admin" | "teacher" | "student" | "parent" | null; id?: string }> {
+  return { role: "admin", id: undefined }; // Change to null to test without admin privileges
+}
 
 type SubjectList = Subject & { teachers: Teacher[] };
 
@@ -15,8 +19,7 @@ const SubjectListPage = async ({
 }: {
   searchParams: { [key: string]: string | undefined };
 }) => {
-  const { sessionClaims } = auth();
-  const role = (sessionClaims?.metadata as { role?: string })?.role;
+  const { role } = await getCurrentUser();
 
   const columns = [
     {

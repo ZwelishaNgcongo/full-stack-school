@@ -1,9 +1,22 @@
-import { UserButton } from "@clerk/nextjs";
-import { currentUser } from "@clerk/nextjs/server";
 import Image from "next/image";
+import Link from "next/link";
+
+// Mock auth to remove Clerk dependency - matching the Menu component
+async function getCurrentUser(): Promise<{ 
+  role: "admin" | "teacher" | "student" | "parent" | null; 
+  id?: string;
+  name?: string;
+}> {
+  return { 
+    role: "admin", 
+    id: "mock-user-id", 
+    name: "John Doe" 
+  };
+}
 
 const Navbar = async () => {
-  const user = await currentUser();
+  const user = await getCurrentUser();
+  
   return (
     <div className="flex items-center justify-between p-4">
       {/* SEARCH BAR */}
@@ -17,23 +30,26 @@ const Navbar = async () => {
       </div>
       {/* ICONS AND USER */}
       <div className="flex items-center gap-6 justify-end w-full">
-        <div className="bg-white rounded-full w-7 h-7 flex items-center justify-center cursor-pointer">
+        <Link href="/list/messages" className="bg-white rounded-full w-7 h-7 flex items-center justify-center cursor-pointer hover:bg-gray-100">
           <Image src="/message.png" alt="" width={20} height={20} />
-        </div>
-        <div className="bg-white rounded-full w-7 h-7 flex items-center justify-center cursor-pointer relative">
+        </Link>
+        <Link href="/list/announcements" className="bg-white rounded-full w-7 h-7 flex items-center justify-center cursor-pointer relative hover:bg-gray-100">
           <Image src="/announcement.png" alt="" width={20} height={20} />
           <div className="absolute -top-3 -right-3 w-5 h-5 flex items-center justify-center bg-purple-500 text-white rounded-full text-xs">
             1
           </div>
-        </div>
+        </Link>
         <div className="flex flex-col">
-          <span className="text-xs leading-3 font-medium">John Doe</span>
+          <span className="text-xs leading-3 font-medium">
+            {user?.name || "Guest"}
+          </span>
           <span className="text-[10px] text-gray-500 text-right">
-            {user?.publicMetadata?.role as string}
+            {user?.role || "guest"}
           </span>
         </div>
-        {/* <Image src="/avatar.png" alt="" width={36} height={36} className="rounded-full"/> */}
-        <UserButton />
+        <Link href="/profile" className="hover:opacity-80">
+          <Image src="/avatar.png" alt="" width={36} height={36} className="rounded-full"/>
+        </Link>
       </div>
     </div>
   );

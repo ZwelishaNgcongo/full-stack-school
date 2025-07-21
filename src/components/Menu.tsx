@@ -1,4 +1,3 @@
-import { currentUser } from "@clerk/nextjs/server";
 import Image from "next/image";
 import Link from "next/link";
 
@@ -117,9 +116,18 @@ const menuItems = [
   },
 ];
 
+// Mock auth to remove Clerk dependency
+async function getCurrentUser(): Promise<{ 
+  role: "admin" | "teacher" | "student" | "parent" | null; 
+  id?: string 
+}> {
+  return { role: "admin", id: "mock-user-id" }; // Change to null to test without admin privileges
+}
+
 const Menu = async () => {
-  const user = await currentUser();
-  const role = user?.publicMetadata.role as string;
+  const user = await getCurrentUser();
+  const role = user?.role;
+  
   return (
     <div className="mt-4 text-sm">
       {menuItems.map((i) => (
@@ -128,7 +136,7 @@ const Menu = async () => {
             {i.title}
           </span>
           {i.items.map((item) => {
-            if (item.visible.includes(role)) {
+            if (role && item.visible.includes(role)) {
               return (
                 <Link
                   href={item.href}

@@ -1,6 +1,10 @@
 import prisma from "@/lib/prisma";
 import FormModal from "./FormModal";
-import { auth } from "@clerk/nextjs/server";
+
+// Mock auth to remove Clerk dependency
+async function getCurrentUser(): Promise<{ role: "admin" | "teacher" | "student" | "parent" | null; id?: string }> {
+  return { role: "admin", id: "mock-user-id" }; // Change to null to test without admin privileges
+}
 
 export type FormContainerProps = {
   table:
@@ -24,8 +28,7 @@ export type FormContainerProps = {
 const FormContainer = async ({ table, type, data, id }: FormContainerProps) => {
   let relatedData = {};
 
-  const { userId, sessionClaims } = auth();
-  const role = (sessionClaims?.metadata as { role?: string })?.role;
+  const { role, id: userId } = await getCurrentUser();
   const currentUserId = userId;
 
   if (type !== "delete") {

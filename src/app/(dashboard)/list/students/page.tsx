@@ -9,7 +9,10 @@ import { Class, Prisma, Student } from "@prisma/client";
 import Image from "next/image";
 import Link from "next/link";
 
-import { auth } from "@clerk/nextjs/server";
+// Mock auth to remove Clerk dependency
+async function getCurrentUser(): Promise<{ role: "admin" | "teacher" | "student" | "parent" | null; id?: string }> {
+  return { role: "admin", id: undefined }; // Change to null to test without admin privileges
+}
 
 type StudentList = Student & { class: Class };
 
@@ -18,8 +21,7 @@ const StudentListPage = async ({
 }: {
   searchParams: { [key: string]: string | undefined };
 }) => {
-  const { sessionClaims } = auth();
-  const role = (sessionClaims?.metadata as { role?: string })?.role;
+  const { role } = await getCurrentUser();
 
   const columns = [
     {
