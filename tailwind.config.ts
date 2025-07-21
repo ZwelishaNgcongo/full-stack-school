@@ -10,19 +10,28 @@ const config: Config = {
     extend: {
       backgroundImage: {
         "gradient-radial": "radial-gradient(var(--tw-gradient-stops))",
-        "gradient-conic":
-          "conic-gradient(from 180deg at 50% 50%, var(--tw-gradient-stops))",
+        "gradient-conic": "conic-gradient(from 180deg at 50% 50%, var(--tw-gradient-stops))",
       },
       colors: {
-        lamaSky: "#C3EBFA",
-        lamaSkyLight: "#EDF9FD",
-        lamaPurple: "#CFCEFF",
-        lamaPurpleLight: "#F1F0FF",
-        lamaYellow: "#FAE27C",
-        lamaYellowLight: "#FEFCE8",
+        // Brighter and deeper tones for contrast
+        lamaSky: "#0EA5E9",           // Sky blue - vibrant
+        lamaSkyLight: "#E0F2FE",      // Sky background - subtle
+
+        lamaPurple: "#7C3AED",        // Deep purple
+        lamaPurpleLight: "#EDE9FE",   // Soft lavender
+
+        lamaYellow: "#F59E0B",        // Rich amber
+        lamaYellowLight: "#FEF9C3",   // Pale yellow
+
+        lamaGreen: "#10B981",         // Emerald green
+        lamaGreenLight: "#D1FAE5",    // Soft green
+
+        lamaText: "#1E293B",          // Slate-800 (for strong visibility on light bg)
+        lamaTextMuted: "#475569",     // Slate-600 (for labels, secondary text)
       },
     },
   },
   plugins: [],
 };
+
 export default config;

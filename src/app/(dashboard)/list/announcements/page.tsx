@@ -1,3 +1,4 @@
+// AnnouncementListPage.tsx
 import FormContainer from "@/components/FormContainer";
 import Pagination from "@/components/Pagination";
 import Table from "@/components/Table";
@@ -6,15 +7,12 @@ import prisma from "@/lib/prisma";
 import { ITEM_PER_PAGE } from "@/lib/settings";
 import Image from "next/image";
 import { Prisma } from "@prisma/client";
-// Temporary auth stub - replace with real logic
+
 async function getCurrentUser(): Promise<{ id: string | null; role: "admin" | "teacher" | "student" | "parent" | null }> {
   return { id: null, role: null };
 }
 
-type AnnouncementWithClass = Prisma.AnnouncementGetPayload<{
-  include: { class: true };
-}>;
-
+type AnnouncementWithClass = Prisma.AnnouncementGetPayload<{ include: { class: true } }>;
 
 async function getAnnouncements(query: any, p: number): Promise<[AnnouncementWithClass[], number]> {
   const [data, count] = await prisma.$transaction([
@@ -66,7 +64,7 @@ const AnnouncementListPage = async ({ searchParams }: AnnouncementListPageProps)
   ];
 
   const renderRow = (item: AnnouncementWithClass) => (
-    <tr key={item.id} className="border-b border-gray-200 even:bg-slate-50 text-sm hover:bg-lamaPurpleLight">
+    <tr key={item.id} className="border-b border-gray-200 even:bg-slate-50 text-sm hover:bg-purple-50 transition">
       <td className="flex items-center gap-4 p-4">{item.title}</td>
       <td>{item.class?.name || "-"}</td>
       <td className="hidden md:table-cell">{new Intl.DateTimeFormat("en-US").format(item.date)}</td>
@@ -82,16 +80,16 @@ const AnnouncementListPage = async ({ searchParams }: AnnouncementListPageProps)
   );
 
   return (
-    <div className="bg-white p-4 rounded-md flex-1 m-4 mt-0">
+    <div className="card flex-1 m-4 mt-0">
       <div className="flex items-center justify-between">
-        <h1 className="hidden md:block text-lg font-semibold">All Announcements</h1>
+        <h1 className="hidden md:block text-lg font-semibold text-gray-700">All Announcements</h1>
         <div className="flex flex-col md:flex-row items-center gap-4 w-full md:w-auto">
           <TableSearch />
           <div className="flex items-center gap-4 self-end">
-            <button className="w-8 h-8 flex items-center justify-center rounded-full bg-lamaYellow">
+            <button className="btn btn-secondary w-8 h-8 flex items-center justify-center rounded-full">
               <Image src="/filter.png" alt="" width={14} height={14} />
             </button>
-            <button className="w-8 h-8 flex items-center justify-center rounded-full bg-lamaYellow">
+            <button className="btn btn-secondary w-8 h-8 flex items-center justify-center rounded-full">
               <Image src="/sort.png" alt="" width={14} height={14} />
             </button>
             {role === "admin" && <FormContainer table="announcement" type="create" />}
