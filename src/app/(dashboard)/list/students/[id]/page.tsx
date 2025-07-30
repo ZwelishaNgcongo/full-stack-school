@@ -4,7 +4,6 @@ import FormContainer from "@/components/FormContainer";
 import Performance from "@/components/Performance";
 import StudentAttendanceCard from "@/components/StudentAttendanceCard";
 import prisma from "@/lib/prisma";
-import { auth } from "@clerk/nextjs/server";
 import { Class, Student } from "@prisma/client";
 import Image from "next/image";
 import Link from "next/link";
@@ -16,8 +15,12 @@ const SingleStudentPage = async ({
 }: {
   params: { id: string };
 }) => {
-  const { sessionClaims } = auth();
-  const role = (sessionClaims?.metadata as { role?: string })?.role;
+  // You'll need to implement your own authentication logic here
+  // For example, using cookies or session tokens
+  // const { user, role } = await getAuthUser(); // Your custom auth function
+  
+  // For now, you can hardcode the role or get it from your custom auth
+  const role = "admin"; // Replace with your actual role logic
 
   const student:
     | (Student & {
@@ -60,13 +63,23 @@ const SingleStudentPage = async ({
                   <FormContainer table="student" type="update" data={student} />
                 )}
               </div>
+              
+              {/* Student ID Display */}
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-medium text-gray-600">Student ID:</span>
+                <span className="text-sm font-semibold text-blue-600">
+                  {student.username}
+                </span>
+              </div>
+              
               <p className="text-sm text-gray-500">
-                Lorem ipsum, dolor sit amet consectetur adipisicing elit.
+                Active student in {student.class.name}
               </p>
+              
               <div className="flex items-center justify-between gap-2 flex-wrap text-xs font-medium">
                 <div className="w-full md:w-1/3 lg:w-full 2xl:w-1/3 flex items-center gap-2">
                   <Image src="/blood.png" alt="" width={14} height={14} />
-                  <span>{student.bloodType}</span>
+                  <span>{student.bloodType || "Not specified"}</span>
                 </div>
                 <div className="w-full md:w-1/3 lg:w-full 2xl:w-1/3 flex items-center gap-2">
                   <Image src="/date.png" alt="" width={14} height={14} />
@@ -76,18 +89,19 @@ const SingleStudentPage = async ({
                 </div>
                 <div className="w-full md:w-1/3 lg:w-full 2xl:w-1/3 flex items-center gap-2">
                   <Image src="/mail.png" alt="" width={14} height={14} />
-                  <span>{student.email || "-"}</span>
+                  <span>{student.email || "Not provided"}</span>
                 </div>
                 <div className="w-full md:w-1/3 lg:w-full 2xl:w-1/3 flex items-center gap-2">
                   <Image src="/phone.png" alt="" width={14} height={14} />
-                  <span>{student.phone || "-"}</span>
+                  <span>{student.phone || "Not provided"}</span>
                 </div>
               </div>
             </div>
           </div>
+          
           {/* SMALL CARDS */}
           <div className="flex-1 flex gap-4 justify-between flex-wrap">
-            {/* CARD */}
+            {/* ATTENDANCE CARD */}
             <div className="bg-white p-4 rounded-md flex gap-4 w-full md:w-[48%] xl:w-[45%] 2xl:w-[48%]">
               <Image
                 src="/singleAttendance.png"
@@ -100,7 +114,8 @@ const SingleStudentPage = async ({
                 <StudentAttendanceCard id={student.id} />
               </Suspense>
             </div>
-            {/* CARD */}
+            
+            {/* GRADE CARD */}
             <div className="bg-white p-4 rounded-md flex gap-4 w-full md:w-[48%] xl:w-[45%] 2xl:w-[48%]">
               <Image
                 src="/singleBranch.png"
@@ -116,7 +131,8 @@ const SingleStudentPage = async ({
                 <span className="text-sm text-gray-400">Grade</span>
               </div>
             </div>
-            {/* CARD */}
+            
+            {/* LESSONS CARD */}
             <div className="bg-white p-4 rounded-md flex gap-4 w-full md:w-[48%] xl:w-[45%] 2xl:w-[48%]">
               <Image
                 src="/singleLesson.png"
@@ -132,7 +148,8 @@ const SingleStudentPage = async ({
                 <span className="text-sm text-gray-400">Lessons</span>
               </div>
             </div>
-            {/* CARD */}
+            
+            {/* CLASS CARD */}
             <div className="bg-white p-4 rounded-md flex gap-4 w-full md:w-[48%] xl:w-[45%] 2xl:w-[48%]">
               <Image
                 src="/singleClass.png"
@@ -148,50 +165,57 @@ const SingleStudentPage = async ({
             </div>
           </div>
         </div>
-        {/* BOTTOM */}
+        
+        {/* BOTTOM - SCHEDULE */}
         <div className="mt-4 bg-white rounded-md p-4 h-[800px]">
-          <h1>Student&apos;s Schedule</h1>
+          <h1 className="text-lg font-semibold mb-4">Student&apos;s Schedule</h1>
           <BigCalendarContainer type="classId" id={student.class.id} />
         </div>
       </div>
-      {/* RIGHT */}
+      
+      {/* RIGHT SIDEBAR */}
       <div className="w-full xl:w-1/3 flex flex-col gap-4">
+        {/* SHORTCUTS */}
         <div className="bg-white p-4 rounded-md">
-          <h1 className="text-xl font-semibold">Shortcuts</h1>
+          <h1 className="text-xl font-semibold">Quick Actions</h1>
           <div className="mt-4 flex gap-4 flex-wrap text-xs text-gray-500">
             <Link
-              className="p-3 rounded-md bg-lamaSkyLight"
+              className="p-3 rounded-md bg-lamaSkyLight hover:bg-blue-200 transition-colors"
               href={`/list/lessons?classId=${student.class.id}`}
             >
               Student&apos;s Lessons
             </Link>
             <Link
-              className="p-3 rounded-md bg-lamaPurpleLight"
+              className="p-3 rounded-md bg-lamaPurpleLight hover:bg-purple-200 transition-colors"
               href={`/list/teachers?classId=${student.class.id}`}
             >
               Student&apos;s Teachers
             </Link>
             <Link
-              className="p-3 rounded-md bg-pink-50"
+              className="p-3 rounded-md bg-pink-50 hover:bg-pink-100 transition-colors"
               href={`/list/exams?classId=${student.class.id}`}
             >
               Student&apos;s Exams
             </Link>
             <Link
-              className="p-3 rounded-md bg-lamaSkyLight"
+              className="p-3 rounded-md bg-lamaSkyLight hover:bg-blue-200 transition-colors"
               href={`/list/assignments?classId=${student.class.id}`}
             >
               Student&apos;s Assignments
             </Link>
             <Link
-              className="p-3 rounded-md bg-lamaYellowLight"
+              className="p-3 rounded-md bg-lamaYellowLight hover:bg-yellow-200 transition-colors"
               href={`/list/results?studentId=${student.id}`}
             >
               Student&apos;s Results
             </Link>
           </div>
         </div>
+        
+        {/* PERFORMANCE */}
         <Performance />
+        
+        {/* ANNOUNCEMENTS */}
         <Announcements />
       </div>
     </div>

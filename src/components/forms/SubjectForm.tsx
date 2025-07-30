@@ -54,7 +54,7 @@ const SubjectForm = ({
     }
   }, [state, router, type, setOpen]);
 
-  const { teachers } = relatedData;
+  const { teachers } = relatedData || { teachers: [] };
 
   return (
     <form className="flex flex-col gap-8" onSubmit={onSubmit}>
@@ -80,28 +80,44 @@ const SubjectForm = ({
             hidden
           />
         )}
-        <div className="flex flex-col gap-2 w-full md:w-1/4">
-          <label className="text-xs text-gray-500">Teachers</label>
-          <select
-            multiple
-            className="ring-[1.5px] ring-gray-300 p-2 rounded-md text-sm w-full"
-            {...register("teachers")}
-            defaultValue={data?.teachers}
-          >
-            {teachers.map(
-              (teacher: { id: string; name: string; surname: string }) => (
-                <option value={teacher.id} key={teacher.id}>
-                  {teacher.name + " " + teacher.surname}
-                </option>
-              )
+        
+        {/* Only show teachers field if teachers exist or we're updating */}
+        {(teachers.length > 0 || type === "update") && (
+          <div className="flex flex-col gap-2 w-full md:w-1/4">
+            <label className="text-xs text-gray-500">
+              Teachers {type === "create" && "(Optional)"}
+            </label>
+            <select
+              multiple
+              className="ring-[1.5px] ring-gray-300 p-2 rounded-md text-sm w-full"
+              {...register("teachers")}
+              defaultValue={data?.teachers}
+            >
+              {teachers.map(
+                (teacher: { id: string; name: string; surname: string }) => (
+                  <option value={teacher.id} key={teacher.id}>
+                    {teacher.name + " " + teacher.surname}
+                  </option>
+                )
+              )}
+            </select>
+            {errors.teachers?.message && (
+              <p className="text-xs text-red-400">
+                {errors.teachers.message.toString()}
+              </p>
             )}
-          </select>
-          {errors.teachers?.message && (
-            <p className="text-xs text-red-400">
-              {errors.teachers.message.toString()}
-            </p>
-          )}
-        </div>
+          </div>
+        )}
+
+        {/* Show message when no teachers exist */}
+        {teachers.length === 0 && type === "create" && (
+          <div className="flex flex-col gap-2 w-full md:w-1/4">
+            <label className="text-xs text-gray-500">Teachers</label>
+            <div className="ring-[1.5px] ring-gray-300 p-2 rounded-md text-sm w-full text-gray-400 bg-gray-50">
+              No teachers available. Create teachers first, then edit this subject to assign teachers.
+            </div>
+          </div>
+        )}
       </div>
       {state.error && (
         <span className="text-red-500">Something went wrong!</span>

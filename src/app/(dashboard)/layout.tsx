@@ -1,5 +1,11 @@
 import Menu from "@/components/Menu";
 import Navbar from "@/components/Navbar";
+import { Inter } from "next/font/google";
+
+const inter = Inter({
+  subsets: ['latin'],
+  display: 'swap',
+});
 
 export default function DashboardLayout({
   children,
@@ -7,7 +13,7 @@ export default function DashboardLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div className="h-screen flex">
+    <div className={`${inter.className} h-screen flex`}>
       {/* LEFT SIDEBAR */}
       <div className="w-[14%] md:w-[8%] lg:w-[16%] xl:w-[14%]">
         <Menu />
@@ -23,3 +29,4 @@ export default function DashboardLayout({
     </div>
   );
 }
+

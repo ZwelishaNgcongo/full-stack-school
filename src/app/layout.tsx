@@ -1,23 +1,16 @@
-import type { Metadata } from "next";
-import { Inter } from "next/font/google";
+// layout.tsx
 import "./globals.css";
-import { AuthProvider } from './contexts/AuthContext'; // Your custom auth
+import { AuthProvider } from './contexts/AuthContext';
 
-const inter = Inter({ subsets: ["latin"] });
-
-export const metadata: Metadata = {
+export const metadata = {
   title: "School Dashboard",
   description: "School management system",
 };
 
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
-      <body className={inter.className}>
+      <body>
         <AuthProvider>
           {children}
         </AuthProvider>

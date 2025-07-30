@@ -2,6 +2,8 @@
 @tailwind components;
 @tailwind utilities;
 
+
+
 /* === General Font Family === */
 body {
   font-family: "Inter", sans-serif;
