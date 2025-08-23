@@ -10,10 +10,11 @@ export type SubjectSchema = z.infer<typeof subjectSchema>;
 
 export const classSchema = z.object({
   id: z.coerce.number().optional(),
-  name: z.string().min(1, { message: "Subject name is required!" }),
-  capacity: z.coerce.number().min(1, { message: "Capacity name is required!" }),
-  gradeId: z.coerce.number().min(1, { message: "Grade name is required!" }),
-  supervisorId: z.coerce.string().optional(),
+  name: z.string().min(1, { message: "Class name is required!" }),
+  capacity: z.coerce.number().min(1, { message: "Capacity is required!" }),
+  gradeId: z.coerce.number().min(1, { message: "Grade is required!" }),
+  supervisorId: z.string().optional(),
+  description: z.string().optional()
 });
 
 export type ClassSchema = z.infer<typeof classSchema>;
@@ -42,32 +43,34 @@ export const teacherSchema = z.object({
   birthday: z.coerce.date({ message: "Birthday is required!" }),
   sex: z.enum(["MALE", "FEMALE"], { message: "Sex is required!" }),
   subjects: z.array(z.string()).optional(),
+  
 });
 
 export type TeacherSchema = z.infer<typeof teacherSchema>;
 
 // Add this to your student schema
+
 export const studentSchema = z.object({
-  studentId: z.string().min(1, "Student ID is required"),
-  name: z.string().min(1, "Name is required"),
-  surname: z.string().min(1, "Surname is required"),
-  birthday: z.coerce.date({
-    required_error: "Birthday is required",
-  }),
-  sex: z.enum(["MALE", "FEMALE"], {
-    required_error: "Please select a gender",
-  }),
-  gradeId: z.coerce.number().min(1, "Please select a grade"),
-  classId: z.coerce.number().min(1, "Please select a class"),
+  id: z.string().optional(),
+  studentId: z.string().min(1, { message: "Student ID is required!" }),
+  username: z.string().min(1, { message: "Username is required!" }),
+  name: z.string().min(1, { message: "Name is required!" }),
+  surname: z.string().min(1, { message: "Surname is required!" }),
+  birthday: z.string().min(1, { message: "Birthday is required!" }),
+  sex: z.enum(["MALE", "FEMALE"]),
+  password: z.string().min(1, { message: "Password is required!" }).optional(),
+  gradeId: z.coerce.number(),
+  classId: z.coerce.number(),
+  email: z.string().email().optional(),
   phone: z.string().optional(),
-  email: z.string().email().optional().or(z.literal("")),
   address: z.string().optional(),
-  bloodType: z.string().optional(),
-  img: z.string().optional(),
-  id: z.string().optional(), // For updates
+  parentId: z.string().optional(),
 });
 
 export type StudentSchema = z.infer<typeof studentSchema>;
+
+
+
 export const examSchema = z.object({
   id: z.coerce.number().optional(),
   title: z.string().min(1, { message: "Title name is required!" }),
@@ -77,3 +80,17 @@ export const examSchema = z.object({
 });
 
 export type ExamSchema = z.infer<typeof examSchema>;
+export const parentSchema = z.object({
+  id: z.string().optional(), // For update
+  username: z.string().min(3),
+  name: z.string().min(1),
+  surname: z.string().min(1),
+  email: z.string().email().optional(),
+  phone: z.string().optional(),
+  address: z.string().optional(),
+  img: z.string().optional(),
+  password: z.string().min(6).optional(), // Only on create
+  studentId: z.string().min(1),
+});
+
+export type ParentSchema = z.infer<typeof parentSchema>;

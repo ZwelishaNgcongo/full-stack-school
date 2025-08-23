@@ -7,10 +7,73 @@ import {
   StudentSchema,
   SubjectSchema,
   TeacherSchema,
+  ParentSchema,
 } from "./formValidationSchemas";
 import prisma from "./prisma";
 
 type CurrentState = { success: boolean; error: boolean };
+
+// Type definitions for Prisma results
+interface LessonResult {
+  id: number;
+  name: string;
+  startTime: Date;
+  endTime: Date;
+  day: "MONDAY" | "TUESDAY" | "WEDNESDAY" | "THURSDAY" | "FRIDAY";
+  subjectId: number;
+  classId: number;
+  teacherId: string;
+}
+
+export const createParent = async (state: any, data: ParentSchema) => {
+  try {
+    if (!data.password) throw new Error("Password is required");
+
+    await prisma.parent.create({
+      data: {
+        username: data.username,
+        name: data.name,
+        surname: data.surname,
+        email: data.email || null,
+        phone: data.phone || null,
+        address: data.address || null,
+        password: data.password,
+        students: {
+          connect: { id: data.studentId },
+        },
+      },
+    });
+
+    return { success: true, error: false };
+  } catch (err) {
+    console.error("createParent error:", err);
+    return { success: false, error: true };
+  }
+};
+
+export const updateParent = async (state: any, data: ParentSchema) => {
+  try {
+    await prisma.parent.update({
+      where: { id: data.id },
+      data: {
+        username: data.username,
+        name: data.name,
+        surname: data.surname,
+        email: data.email || null,
+        phone: data.phone || null,
+        address: data.address || null,
+        students: {
+          set: [{ id: data.studentId }],
+        },
+      },
+    });
+
+    return { success: true, error: false };
+  } catch (err) {
+    console.error("updateParent error:", err);
+    return { success: false, error: true };
+  }
+};
 
 /* ------------------- SUBJECT ------------------- */
 
@@ -20,7 +83,7 @@ export const createSubject = async (currentState: CurrentState, data: SubjectSch
       data: {
         name: data.name,
         teachers: {
-          connect: data.teachers.map((teacherId) => ({ id: teacherId })),
+          connect: data.teachers?.map((teacherId) => ({ id: teacherId })) || [], // Handle undefined teachers
         },
       },
     });
@@ -38,7 +101,7 @@ export const updateSubject = async (currentState: CurrentState, data: SubjectSch
       data: {
         name: data.name,
         teachers: {
-          set: data.teachers.map((teacherId) => ({ id: teacherId })),
+          set: data.teachers?.map((teacherId) => ({ id: teacherId })) || [], // Handle undefined teachers
         },
       },
     });
@@ -117,11 +180,11 @@ export const createTeacher = async (currentState: CurrentState, data: TeacherSch
         img: teacherData.img || null,
         sex: teacherData.sex,
         birthday: teacherData.birthday,
-        password, // ✅ Now guaranteed to be string
+        password,
         subjects: {
           connect: teacherData.subjects?.map((subjectId) => ({
             id: Number(subjectId),
-          })),
+          })) || [], // Handle undefined subjects
         },
       },
     });
@@ -133,11 +196,9 @@ export const createTeacher = async (currentState: CurrentState, data: TeacherSch
   }
 };
 
-
 export const updateTeacher = async (currentState: CurrentState, data: TeacherSchema) => {
   if (!data.id) return { success: false, error: true };
   try {
-    // Destructure password from data and create update object without it
     const { password, ...teacherData } = data;
     
     await prisma.teacher.update({
@@ -150,13 +211,12 @@ export const updateTeacher = async (currentState: CurrentState, data: TeacherSch
         phone: teacherData.phone || null,
         address: teacherData.address,
         img: teacherData.img || null,
-       
         sex: teacherData.sex,
         birthday: teacherData.birthday,
         subjects: {
           set: teacherData.subjects?.map((subjectId) => ({
             id: Number(subjectId),
-          })),
+          })) || [], // Handle undefined subjects
         },
       },
     });
@@ -168,7 +228,7 @@ export const updateTeacher = async (currentState: CurrentState, data: TeacherSch
 };
 
 export const deleteTeacher = async (currentState: CurrentState, data: FormData) => {
-  const id = data.get("id") as string; // Teacher ID is a string
+  const id = data.get("id") as string;
   try {
     await prisma.teacher.delete({ where: { id } });
     return { success: true, error: false };
@@ -179,43 +239,29 @@ export const deleteTeacher = async (currentState: CurrentState, data: FormData) 
 };
 
 /* ------------------- STUDENT ------------------- */
-export const createStudent = async (currentState: CurrentState, data: StudentSchema) => {
+export const createStudent = async (currentState: CurrentState, formData: FormData) => {
   try {
-    if (!data.id) {
-      throw new Error("Student ID is required.");
-    }
+    const studentData = {
+      studentId: formData.get("studentId") as string,
+      username: formData.get("username") as string,
+      name: formData.get("name") as string,
+      surname: formData.get("surname") as string,
+      email: formData.get("email") ? String(formData.get("email")) : null,
+      phone: formData.get("phone") ? String(formData.get("phone")) : null,
+      address: formData.get("address") ? String(formData.get("address")) : null,
+      password: formData.get("password") as string,
+      sex: formData.get("sex") as "MALE" | "FEMALE",
+      birthday: formData.get("birthday")
+        ? new Date(formData.get("birthday") as string)
+        : null,
+      gradeId: formData.get("gradeId") ? Number(formData.get("gradeId")) : null,
+      classId: formData.get("classId") ? Number(formData.get("classId")) : null,
+      parentId: formData.get("parentId") ? Number(formData.get("parentId")) : null,
+      img: null,
+    };
 
-    if (!data.password) {
-      throw new Error("Password is required.");
-    }
-
-    const classItem = await prisma.class.findUnique({
-      where: { id: data.classId },
-      include: { _count: { select: { students: true } } },
-    });
-
-    if (classItem && classItem.capacity === classItem._count.students) {
-      return { success: false, error: true };
-    }
-
-    await prisma.student.create({
-      data: {
-        id: data.id,
-        username: data.username,
-        name: data.name,
-        surname: data.surname,
-        email: data.email || null,
-        phone: data.phone || null,
-        address: data.address,
-        img: data.img || null,
-        password: data.password, // Safe now
-        sex: data.sex,
-        birthday: data.birthday,
-        gradeId: data.gradeId,
-        classId: data.classId,
-        parentId: data.parentId,
-      },
-    });
+    await prisma.student.create({ data: studentData });
+    revalidatePath("/list/students");
 
     return { success: true, error: false };
   } catch (err) {
@@ -226,30 +272,53 @@ export const createStudent = async (currentState: CurrentState, data: StudentSch
 
 
 
-export const updateStudent = async (currentState: CurrentState, data: StudentSchema) => {
-  if (!data.id) return { success: false, error: true };
+
+export const updateStudent = async (currentState: CurrentState, formData: FormData) => {
   try {
-    // Destructure password from data and create update object without it
-    const { password, ...studentData } = data;
-    
+    console.log("Updating student with FormData");
+
+    // Extract data from FormData
+    const data = {
+      id: formData.get("id") as string, // database primary key
+      studentId: formData.get("studentId") as string, // school ID
+      name: formData.get("name") as string,
+      surname: formData.get("surname") as string,
+      email: formData.get("email") as string,
+      phone: formData.get("phone") as string,
+      address: formData.get("address") as string,
+      birthday: formData.get("birthday") as string,
+      sex: formData.get("sex") as string,
+      classId: formData.get("classId") as string,
+      gradeId: formData.get("gradeId") as string,
+      parentId: formData.get("parentId") as string | null,
+    };
+
+    if (!data.id) throw new Error("Database ID is required for update.");
+
+    const updateData: any = {
+      studentId: data.studentId,
+      username: data.studentId, // keep username aligned with Student ID
+      name: data.name,
+      surname: data.surname,
+      email: data.email || null,
+      phone: data.phone || null,
+      address: data.address || "Not provided",
+      sex: data.sex as "MALE" | "FEMALE",
+      birthday: new Date(data.birthday),
+    };
+
+    if (data.gradeId) updateData.gradeId = Number(data.gradeId);
+    if (data.classId) updateData.classId = Number(data.classId);
+    if (data.parentId) updateData.parentId = data.parentId;
+
+    console.log("Updating student with:", updateData);
+
     await prisma.student.update({
       where: { id: data.id },
-      data: {
-        username: studentData.username,
-        name: studentData.name,
-        surname: studentData.surname,
-        email: studentData.email || null,
-        phone: studentData.phone || null,
-        address: studentData.address,
-        img: studentData.img || null,
-       /*  bloodType: studentData.bloodType, */
-        sex: studentData.sex,
-        birthday: studentData.birthday,
-        gradeId: studentData.gradeId,
-        classId: studentData.classId,
-        parentId: studentData.parentId,
-      },
+      data: updateData,
     });
+
+    revalidatePath("/list/students");
     return { success: true, error: false };
   } catch (err) {
     console.error("updateStudent error:", err);
@@ -258,7 +327,7 @@ export const updateStudent = async (currentState: CurrentState, data: StudentSch
 };
 
 export const deleteStudent = async (currentState: CurrentState, data: FormData) => {
-  const id = data.get("id") as string; // Student ID is a string
+  const id = data.get("id") as string;
   try {
     await prisma.student.delete({ where: { id } });
     return { success: true, error: false };
@@ -320,11 +389,11 @@ export const getLessons = async (type: "teacherId" | "classId", id: string | num
   try {
     const lessons = await prisma.lesson.findMany({
       where: type === "teacherId"
-        ? { teacherId: id as string } // teacherId is a string in schema
-        : { classId: id as number },   // classId is a number in schema
+        ? { teacherId: id as string }
+        : { classId: id as number },
     });
 
-    const events = lessons.map((lesson) => ({
+    const events = lessons.map((lesson: LessonResult) => ({
       title: lesson.name,
       start: lesson.startTime,
       end: lesson.endTime,

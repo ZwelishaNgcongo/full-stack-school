@@ -14,18 +14,19 @@ model Admin {
 
 model Student {
   id          String       @id 
+   studentId   String       @unique                // school-assigned student ID
   username    String       @unique
   name        String
   surname     String
   email       String?      @unique
   phone       String?      @unique
-  address     String
+  address     String?      // ← changed from String to String?
   img         String?
-  password String
+  password    String
   sex         UserSex
   createdAt   DateTime     @default(now())
-  parentId    String
-  parent      Parent       @relation(fields: [parentId], references: [id])
+  parentId    String?      // ← changed from String to String?
+  parent      Parent?      @relation(fields: [parentId], references: [id])
   classId     Int
   class       Class        @relation(fields: [classId], references: [id])
   gradeId     Int
@@ -34,6 +35,7 @@ model Student {
   results     Result[]
   birthday    DateTime
 }
+
 
 model Teacher {
   id        String    @id @default(cuid())
@@ -56,16 +58,21 @@ model Teacher {
 
 
 model Parent {
-  id        String    @id
+  id        String    @id @default(uuid())
   username  String    @unique
   name      String
   surname   String
   email     String?   @unique
-  phone     String    @unique
-  address   String
+  phone     String?
+  address   String?
+  
+  password  String
+  students  Student[] // Relation to students
+
   createdAt DateTime  @default(now())
-  students  Student[]
+  updatedAt DateTime  @updatedAt
 }
+
 
 model Grade {
   id    Int @id @default(autoincrement())

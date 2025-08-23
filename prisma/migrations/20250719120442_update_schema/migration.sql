@@ -42,3 +42,18 @@ ALTER TABLE "_SubjectTeachers" ADD CONSTRAINT "_SubjectTeachers_A_fkey" FOREIGN 
 
 -- AddForeignKey
 ALTER TABLE "_SubjectTeachers" ADD CONSTRAINT "_SubjectTeachers_B_fkey" FOREIGN KEY ("B") REFERENCES "Teacher"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+-- Add this as a Prisma migration or run directly in your database
+INSERT INTO "Grade" (level) VALUES 
+(0),  -- Grade R
+(1),  -- Grade 1
+(2),  -- Grade 2
+(3),  -- Grade 3
+(4),  -- Grade 4
+(5),  -- Grade 5
+(6),  -- Grade 6
+(7),  -- Grade 7
+(8),  -- Grade 8
+(9),  -- Grade 9
+(10), -- Grade 10
+(11), -- Grade 11
+(12); -- Grade 12
