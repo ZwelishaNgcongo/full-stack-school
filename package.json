@@ -2,11 +2,17 @@
   "name": "lama-dev-next-dashboard",
   "version": "0.1.0",
   "private": true,
+  
+  "prisma": {
+    "seed": "prisma/seed.js"
+  },
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+     "db:seed": "npx prisma db seed",
+    "db:reset": "npx prisma migrate reset --force"
   },
   "dependencies": {
     "@fontsource/inter": "^5.2.6",
@@ -37,4 +43,6 @@
     "ts-node": "^10.9.2",
     "typescript": "^5"
   }
+  
+  
 }

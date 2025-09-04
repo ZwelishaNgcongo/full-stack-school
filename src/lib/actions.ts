@@ -238,29 +238,100 @@ export const deleteTeacher = async (currentState: CurrentState, data: FormData) 
   }
 };
 
+
 /* ------------------- STUDENT ------------------- */
-export const createStudent = async (currentState: CurrentState, formData: FormData) => {
+export const createStudent = async (currentState: CurrentState, data: StudentSchema) => {
   try {
+    console.log("createStudent called with data:", data);
+
+    // Validate required fields
+    if (!data.username || !data.name || !data.surname || !data.birthday || !data.sex) {
+      console.error("Missing required fields:", { 
+        username: !!data.username, 
+        name: !!data.name, 
+        surname: !!data.surname, 
+        birthday: !!data.birthday, 
+        sex: !!data.sex 
+      });
+      return { success: false, error: true };
+    }
+
+    if (!data.gradeId || !data.classId) {
+      console.error("Missing grade or class:", { gradeId: data.gradeId, classId: data.classId });
+      return { success: false, error: true };
+    }
+
+    // Generate a unique ID for the student if not provided
+    const generateUniqueId = () => {
+      return `stu_${Date.now()}_${Math.floor(Math.random() * 10000)}`;
+    };
+
+    // Prepare student data for database - simplified like TeacherForm
     const studentData = {
-      studentId: formData.get("studentId") as string,
-      username: formData.get("username") as string,
-      name: formData.get("name") as string,
-      surname: formData.get("surname") as string,
-      email: formData.get("email") ? String(formData.get("email")) : null,
-      phone: formData.get("phone") ? String(formData.get("phone")) : null,
-      address: formData.get("address") ? String(formData.get("address")) : null,
-      password: formData.get("password") as string,
-      sex: formData.get("sex") as "MALE" | "FEMALE",
-      birthday: formData.get("birthday")
-        ? new Date(formData.get("birthday") as string)
-        : null,
-      gradeId: formData.get("gradeId") ? Number(formData.get("gradeId")) : null,
-      classId: formData.get("classId") ? Number(formData.get("classId")) : null,
-      parentId: formData.get("parentId") ? Number(formData.get("parentId")) : null,
+      id: data.id || generateUniqueId(),
+      studentId: data.studentId || data.username,
+      username: data.username,
+      name: data.name,
+      surname: data.surname,
+      email: data.email || null,
+      phone: data.phone || null,
+      address: data.address || null,
+      password: data.password || "defaultpass123",
+      sex: data.sex,
+      birthday: typeof data.birthday === 'string' ? new Date(data.birthday) : data.birthday,
+      gradeId: data.gradeId,
+      classId: data.classId,
+      parentId: data.parentId || null,
       img: null,
     };
 
-    await prisma.student.create({ data: studentData });
+    console.log("Prepared student data:", studentData);
+
+    // Check that grade and class exist
+    const [gradeExists, classExists] = await Promise.all([
+      prisma.grade.findUnique({ where: { id: studentData.gradeId } }),
+      prisma.class.findUnique({ where: { id: studentData.classId } })
+    ]);
+
+    if (!gradeExists) {
+      console.error("Grade not found:", studentData.gradeId);
+      return { success: false, error: true };
+    }
+
+    if (!classExists) {
+      console.error("Class not found:", studentData.classId);
+      return { success: false, error: true };
+    }
+
+    console.log("Grade and class validation passed");
+
+    // Check for existing student with same username or studentId
+    const existingStudent = await prisma.student.findFirst({
+      where: {
+        OR: [
+          { username: studentData.username },
+          { studentId: studentData.studentId }
+        ]
+      }
+    });
+
+    if (existingStudent) {
+      console.error("Student already exists:", existingStudent);
+      return { success: false, error: true };
+    }
+
+    // Create the student
+    const createdStudent = await prisma.student.create({ 
+      data: studentData,
+      include: {
+        class: true,
+        grade: true
+      }
+    });
+
+    console.log("Student created successfully:", createdStudent.id);
+    
+    // IMPORTANT: Use revalidatePath to refresh the data
     revalidatePath("/list/students");
 
     return { success: true, error: false };
@@ -269,46 +340,26 @@ export const createStudent = async (currentState: CurrentState, formData: FormDa
     return { success: false, error: true };
   }
 };
-
-
-
-
-export const updateStudent = async (currentState: CurrentState, formData: FormData) => {
+export const updateStudent = async (currentState: CurrentState, data: StudentSchema) => {
   try {
-    console.log("Updating student with FormData");
-
-    // Extract data from FormData
-    const data = {
-      id: formData.get("id") as string, // database primary key
-      studentId: formData.get("studentId") as string, // school ID
-      name: formData.get("name") as string,
-      surname: formData.get("surname") as string,
-      email: formData.get("email") as string,
-      phone: formData.get("phone") as string,
-      address: formData.get("address") as string,
-      birthday: formData.get("birthday") as string,
-      sex: formData.get("sex") as string,
-      classId: formData.get("classId") as string,
-      gradeId: formData.get("gradeId") as string,
-      parentId: formData.get("parentId") as string | null,
-    };
+    console.log("Updating student with data object");
 
     if (!data.id) throw new Error("Database ID is required for update.");
 
     const updateData: any = {
-      studentId: data.studentId,
-      username: data.studentId, // keep username aligned with Student ID
+      studentId: data.studentId || data.username,
+      username: data.username,
       name: data.name,
       surname: data.surname,
       email: data.email || null,
       phone: data.phone || null,
       address: data.address || "Not provided",
-      sex: data.sex as "MALE" | "FEMALE",
-      birthday: new Date(data.birthday),
+      sex: data.sex,
+      birthday: new Date(data.birthday), // Convert string to Date
     };
 
-    if (data.gradeId) updateData.gradeId = Number(data.gradeId);
-    if (data.classId) updateData.classId = Number(data.classId);
+    if (data.gradeId) updateData.gradeId = data.gradeId;
+    if (data.classId) updateData.classId = data.classId;
     if (data.parentId) updateData.parentId = data.parentId;
 
     console.log("Updating student with:", updateData);

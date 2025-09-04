@@ -56,17 +56,16 @@ export const studentSchema = z.object({
   username: z.string().min(1, { message: "Username is required!" }),
   name: z.string().min(1, { message: "Name is required!" }),
   surname: z.string().min(1, { message: "Surname is required!" }),
-  birthday: z.string().min(1, { message: "Birthday is required!" }),
+  birthday: z.coerce.date({ message: "Birthday is required!" }),
   sex: z.enum(["MALE", "FEMALE"]),
-  password: z.string().min(1, { message: "Password is required!" }).optional(),
+  password: z.string().min(8, { message: "Password must be at least 8 characters!" }).optional(),
   gradeId: z.coerce.number(),
   classId: z.coerce.number(),
-  email: z.string().email().optional(),
+  email: z.string().email().optional().or(z.literal("")),
   phone: z.string().optional(),
   address: z.string().optional(),
   parentId: z.string().optional(),
 });
-
 export type StudentSchema = z.infer<typeof studentSchema>;
 
 

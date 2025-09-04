@@ -137,21 +137,84 @@ const DeleteForm = ({
   }, [state, router, table, setOpen]);
 
   return (
-    <form action={formAction} className="p-4 flex flex-col gap-4">
-      <input type="text" name="id" value={id} hidden readOnly />
-      <span className="text-center font-medium">
-        All data will be lost. Are you sure you want to delete this {table}?
-      </span>
-      {state.error && (
-        <span className="text-red-500 text-center">Something went wrong!</span>
-      )}
-      <button 
-        type="submit"
-        className="bg-red-700 text-white py-2 px-4 rounded-md border-none w-max self-center hover:bg-red-800 transition-colors"
+    <div className="relative">
+      {/* Close button for delete form */}
+      <button
+        type="button"
+        onClick={() => setOpen(false)}
+        className="absolute -top-2 -right-2 w-8 h-8 bg-gray-100 hover:bg-red-100 border border-gray-300 hover:border-red-400 rounded-full flex items-center justify-center transition-all duration-200 shadow-sm hover:shadow-md group z-10"
+        aria-label="Close delete confirmation"
       >
-        Delete
+        <svg
+          className="w-4 h-4 text-gray-600 group-hover:text-red-500 transition-colors duration-200"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2.5}
+            d="M6 18L18 6M6 6l12 12"
+          />
+        </svg>
       </button>
-    </form>
+
+      <form action={formAction} className="p-4 flex flex-col gap-4">
+        <input type="text" name="id" value={id} hidden readOnly />
+        
+        {/* Warning icon and message */}
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center">
+            <svg
+              className="w-8 h-8 text-red-600"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.732-.833-2.464 0L4.35 16.5c-.77.833.192 2.5 1.732 2.5z"
+              />
+            </svg>
+          </div>
+          
+          <div className="text-center">
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">
+              Delete {table.charAt(0).toUpperCase() + table.slice(1)}?
+            </h3>
+            <p className="text-gray-600">
+              All data will be lost. Are you sure you want to delete this {table}?
+            </p>
+          </div>
+        </div>
+
+        {state.error && (
+          <div className="p-3 bg-red-50 border border-red-300 rounded-lg">
+            <span className="text-red-700 text-center block">Something went wrong!</span>
+          </div>
+        )}
+        
+        {/* Action buttons */}
+        <div className="flex gap-3 justify-center pt-2">
+          <button
+            type="button"
+            onClick={() => setOpen(false)}
+            className="px-6 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300 transition-colors font-medium"
+          >
+            Cancel
+          </button>
+          <button 
+            type="submit"
+            className="px-6 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors font-medium"
+          >
+            Delete
+          </button>
+        </div>
+      </form>
+    </div>
   );
 };
 
@@ -200,12 +263,15 @@ const FormModal = ({
         <div className="w-screen h-screen absolute left-0 top-0 bg-black bg-opacity-60 z-50 flex items-center justify-center">
           <div className="bg-white p-4 rounded-md relative w-[90%] md:w-[70%] lg:w-[60%] xl:w-[50%] 2xl:w-[40%]">
             {renderForm()}
-            {/* <div
-              className="absolute top-4 right-4 cursor-pointer"
-              onClick={() => setOpen(false)}
-            >
-              <Image src="/close.png" alt="" width={14} height={14} />
-            </div> */}
+            {/* Close button for other forms (create/update) */}
+            {type !== "delete" && (
+              <div
+                className="absolute top-4 right-4 cursor-pointer"
+                onClick={() => setOpen(false)}
+              >
+                <Image src="/close.png" alt="" width={14} height={14} />
+              </div>
+            )}
           </div>
         </div>
       )}
