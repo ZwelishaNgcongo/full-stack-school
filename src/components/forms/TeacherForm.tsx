@@ -2,7 +2,6 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
-import InputField from "../InputField";
 import Image from "next/image";
 import { Dispatch, SetStateAction, useEffect, useState } from "react";
 import { teacherSchema, TeacherSchema } from "@/lib/formValidationSchemas";
@@ -19,6 +18,58 @@ interface CloudinaryUploadInfo {
   original_filename?: string;
   [key: string]: any;
 }
+
+// Updated InputField component with consistent sizing
+const InputField = ({
+  label,
+  name,
+  defaultValue,
+  register,
+  error,
+  type = "text",
+  hidden = false,
+  ...inputProps
+}: {
+  label: string;
+  name: string;
+  defaultValue?: string;
+  register: any;
+  error?: any;
+  type?: string;
+  hidden?: boolean;
+  [key: string]: any;
+}) => {
+  if (hidden) {
+    return (
+      <input
+        type="hidden"
+        {...register(name)}
+        defaultValue={defaultValue}
+        {...inputProps}
+      />
+    );
+  }
+
+  return (
+    <div className="flex flex-col gap-2">
+      <label className="block text-sm font-medium text-gray-700 mb-1">
+        {label} {error && "*"}
+      </label>
+      <input
+        type={type}
+        className="w-full p-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-400 transition text-base"
+        {...register(name)}
+        defaultValue={defaultValue}
+        {...inputProps}
+      />
+      {error?.message && (
+        <p className="text-xs text-red-500 mt-1">
+          {error.message.toString()}
+        </p>
+      )}
+    </div>
+  );
+};
 
 const TeacherForm = ({
   type,
@@ -74,8 +125,8 @@ const TeacherForm = ({
 
   return (
     <div className="relative w-full max-w-5xl mx-auto">
-      <form 
-        className="flex flex-col gap-8 max-h-[90vh] overflow-y-auto p-8 bg-white shadow-2xl rounded-2xl border border-gray-200" 
+      <form
+        className="flex flex-col gap-8 max-h-[90vh] overflow-y-auto p-8 bg-white shadow-2xl rounded-2xl border border-gray-200"
         action={async (formData: FormData) => {
           const dataObject = {
             id: formData.get("id")?.toString() || undefined,
@@ -100,7 +151,7 @@ const TeacherForm = ({
           <h1 className="text-3xl font-extrabold text-blue-700">
             {type === "create" ? "👨‍🏫 Create New Teacher" : "✏️ Update Teacher"}
           </h1>
-          
+
           {/* Close Button */}
           <button
             type="button"
@@ -184,23 +235,27 @@ const TeacherForm = ({
               error={errors.phone}
             />
             <InputField
+              label="Birthday"
+              name="birthday"
+              defaultValue={
+                data?.birthday
+                  ? data.birthday.toISOString().split("T")[0]
+                  : ""
+              }
+              register={register}
+              error={errors.birthday}
+              type="date"
+            />
+            <InputField
               label="Address"
               name="address"
               defaultValue={data?.address}
               register={register}
               error={errors.address}
             />
-            <InputField
-              label="Birthday"
-              name="birthday"
-              defaultValue={data?.birthday ? data.birthday.toISOString().split("T")[0] : ""}
-              register={register}
-              error={errors.birthday}
-              type="date"
-            />
-            
+
             {data && (
-              <InputField
+              <InputField 
                 label="Id"
                 name="id"
                 defaultValue={data?.id}
@@ -209,7 +264,7 @@ const TeacherForm = ({
                 hidden
               />
             )}
-            
+
             <div className="flex flex-col gap-2">
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Gender *
@@ -236,8 +291,7 @@ const TeacherForm = ({
           <h2 className="text-lg font-semibold text-gray-800 border-b border-gray-300 pb-2 mb-4">
             📚 Subject Assignment
           </h2>
-          
-          {/* Only show subjects field if subjects exist or we're updating */}
+
           {(subjects.length > 0 || type === "update") && (
             <div className="flex flex-col gap-2">
               <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -266,14 +320,14 @@ const TeacherForm = ({
             </div>
           )}
 
-          {/* Show message when no subjects exist */}
           {subjects.length === 0 && type === "create" && (
             <div className="flex flex-col gap-2">
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Subjects
               </label>
               <div className="w-full p-3 rounded-lg border border-gray-300 text-sm text-gray-400 bg-gray-50">
-                📝 No subjects available. Create subjects first, then edit this teacher to assign subjects.
+                📝 No subjects available. Create subjects first, then edit this
+                teacher to assign subjects.
               </div>
             </div>
           )}
@@ -284,14 +338,14 @@ const TeacherForm = ({
           <h2 className="text-lg font-semibold text-gray-800 border-b border-gray-300 pb-2 mb-4">
             📸 Profile Photo
           </h2>
-          
+
           <CldUploadWidget
             uploadPreset="school"
             options={{
               multiple: false,
               maxFiles: 1,
               resourceType: "image",
-              maxImageFileSize: 5000000, // 5MB limit
+              maxImageFileSize: 5000000,
               folder: "teachers",
               sources: ["local", "url", "camera"],
               showAdvancedOptions: false,
@@ -300,23 +354,23 @@ const TeacherForm = ({
               maxImageHeight: 1000,
             }}
             onSuccess={(result) => {
-              console.log("Upload successful - Full result:", result);
-              
-              if (result.info && typeof result.info === 'object' && 'secure_url' in result.info) {
+              if (
+                result.info &&
+                typeof result.info === "object" &&
+                "secure_url" in result.info
+              ) {
                 const uploadInfo = result.info as CloudinaryUploadInfo;
-                console.log("Secure URL:", uploadInfo.secure_url);
-                console.log("Public ID:", uploadInfo.public_id);
-                
                 setImg(uploadInfo);
                 setUploadError("");
               } else {
-                console.error("Unexpected result format:", result);
-                setUploadError("Upload completed but result format is unexpected");
+                setUploadError(
+                  "Upload completed but result format is unexpected"
+                );
               }
             }}
             onError={(error) => {
-              console.error("Upload error:", error);
-              const errorMessage = error?.toString || error?.toString() || 'Unknown error occurred';
+              const errorMessage =
+                error?.toString || error?.toString() || "Unknown error occurred";
               setUploadError(`Failed to upload image: ${errorMessage}`);
             }}
           >
@@ -326,61 +380,77 @@ const TeacherForm = ({
                   type="button"
                   className="w-full p-4 rounded-lg border-2 border-dashed border-gray-300 hover:border-orange-400 hover:bg-orange-50 transition-all duration-200 cursor-pointer flex items-center gap-3 justify-center group"
                   onClick={() => {
-                    console.log("Opening upload widget...");
-                    console.log("Current img state:", img);
                     setUploadError("");
                     if (typeof open === "function") {
                       open();
                     } else {
-                      console.warn("Cloudinary widget not ready: open is undefined");
-                      setUploadError("Upload widget is not ready yet. Please try again.");
+                      setUploadError(
+                        "Upload widget is not ready yet. Please try again."
+                      );
                     }
                   }}
                 >
-                  <Image src="/upload.png" alt="upload" width={24} height={24} className="group-hover:scale-110 transition-transform" />
+                  <Image
+                    src="/upload.png"
+                    alt="upload"
+                    width={24}
+                    height={24}
+                    className="group-hover:scale-110 transition-transform"
+                  />
                   <span className="font-medium text-gray-700 group-hover:text-orange-600">
                     {img ? "Change Photo" : "Upload Photo"}
                   </span>
                 </button>
-                
-                {/* Show current image preview if exists */}
+
                 {img && img.secure_url && (
                   <div className="flex flex-col gap-3">
                     <div className="text-sm text-green-600 flex items-center gap-2">
-                      <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                      <svg
+                        className="w-5 h-5"
+                        fill="currentColor"
+                        viewBox="0 0 20 20"
+                      >
+                        <path
+                          fillRule="evenodd"
+                          d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                          clipRule="evenodd"
+                        />
                       </svg>
                       Image uploaded successfully
                     </div>
                     <div className="w-full h-32 relative border-2 border-green-200 rounded-lg overflow-hidden">
-                      <Image 
-                        src={img.secure_url} 
-                        alt="Uploaded preview" 
+                      <Image
+                        src={img.secure_url}
+                        alt="Uploaded preview"
                         fill
                         className="object-cover"
-                        onError={() => {
-                          console.error("Image preview error");
-                          setUploadError("Error displaying image preview");
-                        }}
                       />
                     </div>
                     <div className="text-sm text-gray-600 bg-gray-100 p-2 rounded">
-                      📁 File: {img.original_filename || 'Unknown filename'}
+                      📁 File: {img.original_filename || "Unknown filename"}
                     </div>
                   </div>
                 )}
-                
-                {/* Show existing image for updates */}
+
                 {data?.img && !img && (
                   <div className="flex items-center gap-2 text-sm text-blue-600 bg-blue-100 p-3 rounded-lg">
-                    <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm12 12H4l4-8 3 6 2-4 3 6z" clipRule="evenodd" />
+                    <svg
+                      className="w-5 h-5"
+                      fill="currentColor"
+                      viewBox="0 0 20 20"
+                    >
+                      <path
+                        fillRule="evenodd"
+                        d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm12 12H4l4-8 3 6 2-4 3 6z"
+                        clipRule="evenodd"
+                      />
                     </svg>
-                    <span>Current photo will be kept if no new photo is uploaded</span>
+                    <span>
+                      Current photo will be kept if no new photo is uploaded
+                    </span>
                   </div>
                 )}
-                
-                {/* Show upload error */}
+
                 {uploadError && (
                   <div className="text-sm text-red-600 p-3 bg-red-100 rounded-lg border border-red-200">
                     ⚠️ {uploadError}
@@ -390,17 +460,17 @@ const TeacherForm = ({
             )}
           </CldUploadWidget>
         </div>
-        
-        {/* Error Message */}
+
         {state.error && (
           <div className="p-4 bg-red-100 border border-red-300 rounded-lg">
-            <span className="text-red-700 font-medium">⚠️ Something went wrong! Please try again.</span>
+            <span className="text-red-700 font-medium">
+              ⚠️ Something went wrong! Please try again.
+            </span>
           </div>
         )}
-        
-        {/* Submit Button */}
+
         <div className="flex justify-end pt-6 border-t border-gray-300">
-          <button 
+          <button
             type="submit"
             className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white py-3 px-8 rounded-lg hover:from-blue-700 hover:to-indigo-700 transition-all duration-200 font-bold shadow-lg hover:shadow-xl"
           >

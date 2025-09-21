@@ -25,11 +25,68 @@ interface LessonResult {
   teacherId: string;
 }
 
+/* ------------------- PARENT ------------------- */
+
 export const createParent = async (state: any, data: ParentSchema) => {
   try {
-    if (!data.password) throw new Error("Password is required");
+    console.log("Creating parent with data:", data);
 
-    await prisma.parent.create({
+    // Validate required fields
+    if (!data.password) {
+      console.error("Password is required for parent creation");
+      return { success: false, error: true };
+    }
+
+    if (!data.studentId) {
+      console.error("Student ID is required for parent creation");
+      return { success: false, error: true };
+    }
+
+    // Check if student exists before creating parent
+    console.log("Checking if student exists with ID:", data.studentId);
+    const studentExists = await prisma.student.findUnique({
+      where: { id: data.studentId },
+      select: { id: true, name: true, surname: true }
+    });
+
+    if (!studentExists) {
+      console.error("Student not found with ID:", data.studentId);
+      // Log available students for debugging
+      const availableStudents = await prisma.student.findMany({ 
+        select: { id: true, name: true, surname: true } 
+      });
+      console.log("Available students:", availableStudents);
+      return { success: false, error: true };
+    }
+
+    console.log("Student found:", studentExists.name, studentExists.surname);
+
+    // Check if username is already taken
+    const existingParent = await prisma.parent.findUnique({
+      where: { username: data.username },
+    });
+
+    if (existingParent) {
+      console.error("Username already exists:", data.username);
+      return { success: false, error: true };
+    }
+
+    // Check if this student already has a parent
+    const existingParentForStudent = await prisma.parent.findFirst({
+      where: {
+        students: {
+          some: { id: data.studentId }
+        }
+      }
+    });
+
+    if (existingParentForStudent) {
+      console.error("Student already has a parent assigned:", data.studentId);
+      return { success: false, error: true };
+    }
+
+    // Create the parent
+    const createdParent = await prisma.parent.create({
       data: {
         username: data.username,
         name: data.name,
@@ -42,35 +99,109 @@ export const createParent = async (state: any, data: ParentSchema) => {
           connect: { id: data.studentId },
         },
       },
+      include: {
+        students: {
+          select: { id: true, name: true, surname: true }
+        },
+      },
     });
 
+    console.log("Parent created successfully:", createdParent.id);
+    console.log("Connected to student:", createdParent.students);
+    
+    revalidatePath("/list/parents");
     return { success: true, error: false };
   } catch (err) {
     console.error("createParent error:", err);
+    // Log the specific Prisma error details
+    if (err instanceof Error) {
+      console.error("Error details:", err.message);
+      console.error("Error stack:", err.stack);
+    }
     return { success: false, error: true };
   }
 };
 
 export const updateParent = async (state: any, data: ParentSchema) => {
   try {
-    await prisma.parent.update({
+    console.log("Updating parent with data:", data);
+
+    if (!data.id) {
+      console.error("Parent ID is required for update");
+      return { success: false, error: true };
+    }
+
+    // Check if parent exists
+    const parentExists = await prisma.parent.findUnique({
       where: { id: data.id },
-      data: {
-        username: data.username,
-        name: data.name,
-        surname: data.surname,
-        email: data.email || null,
-        phone: data.phone || null,
-        address: data.address || null,
+      include: { students: true }
+    });
+
+    if (!parentExists) {
+      console.error("Parent not found with ID:", data.id);
+      return { success: false, error: true };
+    }
+
+    // If studentId is provided, check if student exists
+    if (data.studentId) {
+      const studentExists = await prisma.student.findUnique({
+        where: { id: data.studentId },
+      });
+
+      if (!studentExists) {
+        console.error("Student not found with ID:", data.studentId);
+        return { success: false, error: true };
+      }
+    }
+
+    // Build update data
+    const updateData: any = {
+      username: data.username,
+      name: data.name,
+      surname: data.surname,
+      email: data.email || null,
+      phone: data.phone || null,
+      address: data.address || null,
+    };
+
+    // Only update student relationship if studentId is provided
+    if (data.studentId) {
+      updateData.students = {
+        set: [{ id: data.studentId }],
+      };
+    }
+
+    // Update the parent
+    const updatedParent = await prisma.parent.update({
+      where: { id: data.id },
+      data: updateData,
+      include: {
         students: {
-          set: [{ id: data.studentId }],
+          select: { id: true, name: true, surname: true }
         },
       },
     });
 
+    console.log("Parent updated successfully:", updatedParent.id);
+    revalidatePath("/list/parents");
     return { success: true, error: false };
   } catch (err) {
     console.error("updateParent error:", err);
+    if (err instanceof Error) {
+      console.error("Error details:", err.message);
+    }
+    return { success: false, error: true };
+  }
+};
+
+export const deleteParent = async (currentState: CurrentState, data: FormData) => {
+  const id = data.get("id") as string;
+  try {
+    await prisma.parent.delete({ where: { id } });
+    revalidatePath("/list/parents");
+    return { success: true, error: false };
+  } catch (err) {
+    console.error("deleteParent error:", err);
     return { success: false, error: true };
   }
 };
@@ -238,8 +369,8 @@ export const deleteTeacher = async (currentState: CurrentState, data: FormData) 
   }
 };
 
-
 /* ------------------- STUDENT ------------------- */
+
 export const createStudent = async (currentState: CurrentState, data: StudentSchema) => {
   try {
     console.log("createStudent called with data:", data);
@@ -340,6 +471,7 @@ export const createStudent = async (currentState: CurrentState, data: StudentSch
     return { success: false, error: true };
   }
 };
+
 export const updateStudent = async (currentState: CurrentState, data: StudentSchema) => {
   try {
     console.log("Updating student with data object");
@@ -381,6 +513,7 @@ export const deleteStudent = async (currentState: CurrentState, data: FormData) 
   const id = data.get("id") as string;
   try {
     await prisma.student.delete({ where: { id } });
+    revalidatePath("/list/students");
     return { success: true, error: false };
   } catch (err) {
     console.error("deleteStudent error:", err);

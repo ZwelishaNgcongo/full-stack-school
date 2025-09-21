@@ -6,6 +6,7 @@ import {
   deleteStudent,
   deleteSubject,
   deleteTeacher,
+  deleteParent, // Add this import
 } from "@/lib/actions";
 import dynamic from "next/dynamic";
 import Image from "next/image";
@@ -16,11 +17,11 @@ import { toast } from "react-toastify";
 import { FormContainerProps } from "./FormContainer";
 
 // Define the table types
-type TableType = 
-  | "subject" 
-  | "class" 
-  | "teacher" 
-  | "student" 
+type TableType =
+  | "subject"
+  | "class"
+  | "teacher"
+  | "student"
   | "exam"
   | "parent"
   | "lesson"
@@ -36,8 +37,8 @@ const deleteActionMap: Record<TableType, any> = {
   teacher: deleteTeacher,
   student: deleteStudent,
   exam: deleteExam,
+  parent: deleteParent, // Fixed: was pointing to deleteSubject
   // TODO: OTHER DELETE ACTIONS
-  parent: deleteSubject,
   lesson: deleteSubject,
   assignment: deleteSubject,
   result: deleteSubject,
@@ -62,13 +63,20 @@ const ClassForm = dynamic(() => import("./forms/ClassForm"), {
 const ExamForm = dynamic(() => import("./forms/ExamForm"), {
   loading: () => <h1>Loading...</h1>,
 });
+// PARENT FORM IMPORT
+const ParentForm = dynamic(() => import("./forms/ParentForm"), {
+  loading: () => <h1>Loading...</h1>,
+});
 
-const forms: Record<string, (
-  setOpen: Dispatch<SetStateAction<boolean>>,
-  type: "create" | "update",
-  data?: any,
-  relatedData?: any
-) => JSX.Element> = {
+const forms: Record<
+  string,
+  (
+    setOpen: Dispatch<SetStateAction<boolean>>,
+    type: "create" | "update",
+    data?: any,
+    relatedData?: any
+  ) => JSX.Element
+> = {
   subject: (setOpen, type, data, relatedData) => (
     <SubjectForm
       type={type}
@@ -109,16 +117,25 @@ const forms: Record<string, (
       relatedData={relatedData}
     />
   ),
+  // PARENT FORM IN THE FORMS OBJECT
+  parent: (setOpen, type, data, relatedData) => (
+    <ParentForm
+      type={type}
+      data={data}
+      setOpen={setOpen}
+      relatedData={relatedData}
+    />
+  ),
 };
 
 // Separate Delete Form Component
-const DeleteForm = ({ 
-  table, 
-  id, 
-  setOpen 
-}: { 
-  table: TableType; 
-  id: string | number; 
+const DeleteForm = ({
+  table,
+  id,
+  setOpen,
+}: {
+  table: TableType;
+  id: string | number;
   setOpen: Dispatch<SetStateAction<boolean>>;
 }) => {
   const [state, formAction] = useFormState(deleteActionMap[table], {
@@ -130,7 +147,7 @@ const DeleteForm = ({
 
   useEffect(() => {
     if (state.success) {
-      toast(`${table} has been deleted!`);
+      toast(`${table.charAt(0).toUpperCase() + table.slice(1)} has been deleted!`);
       setOpen(false);
       router.refresh();
     }
@@ -162,7 +179,7 @@ const DeleteForm = ({
 
       <form action={formAction} className="p-4 flex flex-col gap-4">
         <input type="text" name="id" value={id} hidden readOnly />
-        
+
         {/* Warning icon and message */}
         <div className="flex flex-col items-center gap-3">
           <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center">
@@ -180,23 +197,26 @@ const DeleteForm = ({
               />
             </svg>
           </div>
-          
+
           <div className="text-center">
             <h3 className="text-lg font-semibold text-gray-900 mb-2">
               Delete {table.charAt(0).toUpperCase() + table.slice(1)}?
             </h3>
             <p className="text-gray-600">
-              All data will be lost. Are you sure you want to delete this {table}?
+              All data will be lost. Are you sure you want to delete this{" "}
+              {table}?
             </p>
           </div>
         </div>
 
         {state.error && (
           <div className="p-3 bg-red-50 border border-red-300 rounded-lg">
-            <span className="text-red-700 text-center block">Something went wrong!</span>
+            <span className="text-red-700 text-center block">
+              Something went wrong!
+            </span>
           </div>
         )}
-        
+
         {/* Action buttons */}
         <div className="flex gap-3 justify-center pt-2">
           <button
@@ -206,7 +226,7 @@ const DeleteForm = ({
           >
             Cancel
           </button>
-          <button 
+          <button
             type="submit"
             className="px-6 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors font-medium"
           >
@@ -245,7 +265,9 @@ const FormModal = ({
     if (type === "delete" && id) {
       return <DeleteForm table={table} id={id} setOpen={setOpen} />;
     } else if (type === "create" || type === "update") {
-      return forms[table] ? forms[table](setOpen, type, data, relatedData) : "Form not found!";
+      return forms[table]
+        ? forms[table](setOpen, type, data, relatedData)
+        : "Form not found!";
     } else {
       return "Form not found!";
     }
@@ -259,19 +281,16 @@ const FormModal = ({
       >
         <Image src={`/${type}.png`} alt="" width={16} height={16} />
       </button>
+
       {open && (
-        <div className="w-screen h-screen absolute left-0 top-0 bg-black bg-opacity-60 z-50 flex items-center justify-center">
-          <div className="bg-white p-4 rounded-md relative w-[90%] md:w-[70%] lg:w-[60%] xl:w-[50%] 2xl:w-[40%]">
+        <div className="fixed inset-0 bg-black bg-opacity-60 z-50 flex items-center justify-center p-4">
+          <div
+            className="bg-white rounded-lg shadow-lg relative 
+                       w-full max-w-2xl lg:max-w-3xl 
+                       max-h-[90vh] overflow-y-auto 
+                       p-6 animate-scaleIn"
+          >
             {renderForm()}
-            {/* Close button for other forms (create/update) */}
-            {type !== "delete" && (
-              <div
-                className="absolute top-4 right-4 cursor-pointer"
-                onClick={() => setOpen(false)}
-              >
-                
-              </div>
-            )}
           </div>
         </div>
       )}

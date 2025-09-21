@@ -79,17 +79,20 @@ export const examSchema = z.object({
 });
 
 export type ExamSchema = z.infer<typeof examSchema>;
+
+
+
+// Updated ParentSchema to include all necessary fields
 export const parentSchema = z.object({
-  id: z.string().optional(), // For update
-  username: z.string().min(3),
-  name: z.string().min(1),
-  surname: z.string().min(1),
-  email: z.string().email().optional(),
+  id: z.string().optional(),
+  name: z.string().min(1, { message: "First name is required!" }),
+  username: z.string().min(1, { message: "Username is required!" }),
+  surname: z.string().min(1, { message: "Last name is required!" }),
+  email: z.string().email({ message: "Invalid email address!" }).optional().or(z.literal("")),
   phone: z.string().optional(),
   address: z.string().optional(),
-  img: z.string().optional(),
-  password: z.string().min(6).optional(), // Only on create
-  studentId: z.string().min(1),
+  password: z.string().min(8, { message: "Password must be at least 8 characters!" }).optional(),
+  studentId: z.string().min(1, { message: "Student selection is required!" }), // This was missing!
 });
 
 export type ParentSchema = z.infer<typeof parentSchema>;
