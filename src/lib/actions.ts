@@ -42,24 +42,24 @@ export const createParent = async (state: any, data: ParentSchema) => {
       return { success: false, error: true };
     }
 
-    // Check if student exists before creating parent
-    console.log("Checking if student exists with ID:", data.studentId);
+    // Check if student exists using studentId field (not database id)
+    console.log("Checking if student exists with studentId:", data.studentId);
     const studentExists = await prisma.student.findUnique({
-      where: { id: data.studentId },
-      select: { id: true, name: true, surname: true }
+      where: { studentId: data.studentId }, // Changed from id to studentId
+      select: { id: true, studentId: true, name: true, surname: true }
     });
 
     if (!studentExists) {
-      console.error("Student not found with ID:", data.studentId);
+      console.error("Student not found with studentId:", data.studentId);
       // Log available students for debugging
       const availableStudents = await prisma.student.findMany({ 
-        select: { id: true, name: true, surname: true } 
+        select: { id: true, studentId: true, name: true, surname: true } 
       });
       console.log("Available students:", availableStudents);
       return { success: false, error: true };
     }
 
-    console.log("Student found:", studentExists.name, studentExists.surname);
+    console.log("Student found:", studentExists.name, studentExists.surname, "ID:", studentExists.studentId);
 
     // Check if username is already taken
     const existingParent = await prisma.parent.findUnique({
@@ -71,11 +71,11 @@ export const createParent = async (state: any, data: ParentSchema) => {
       return { success: false, error: true };
     }
 
-    // Check if this student already has a parent
+    // Check if this student already has a parent using the student's database ID
     const existingParentForStudent = await prisma.parent.findFirst({
       where: {
         students: {
-          some: { id: data.studentId }
+          some: { id: studentExists.id } // Use the database ID for the relation
         }
       }
     });
@@ -85,7 +85,7 @@ export const createParent = async (state: any, data: ParentSchema) => {
       return { success: false, error: true };
     }
 
-    // Create the parent
+    // Create the parent and connect using the student's database ID
     const createdParent = await prisma.parent.create({
       data: {
         username: data.username,
@@ -96,12 +96,12 @@ export const createParent = async (state: any, data: ParentSchema) => {
         address: data.address || null,
         password: data.password,
         students: {
-          connect: { id: data.studentId },
+          connect: { id: studentExists.id }, // Use database ID for the connection
         },
       },
       include: {
         students: {
-          select: { id: true, name: true, surname: true }
+          select: { id: true, studentId: true, name: true, surname: true }
         },
       },
     });
@@ -134,7 +134,11 @@ export const updateParent = async (state: any, data: ParentSchema) => {
     // Check if parent exists
     const parentExists = await prisma.parent.findUnique({
       where: { id: data.id },
-      include: { students: true }
+      include: { 
+        students: {
+          select: { id: true, studentId: true, name: true, surname: true }
+        }
+      }
     });
 
     if (!parentExists) {
@@ -142,16 +146,21 @@ export const updateParent = async (state: any, data: ParentSchema) => {
       return { success: false, error: true };
     }
 
-    // If studentId is provided, check if student exists
+    // If studentId is provided, check if student exists using studentId field
+    let studentDatabaseId = null;
     if (data.studentId) {
       const studentExists = await prisma.student.findUnique({
-        where: { id: data.studentId },
+        where: { studentId: data.studentId }, // Use studentId field
+        select: { id: true, studentId: true, name: true, surname: true }
       });
 
       if (!studentExists) {
-        console.error("Student not found with ID:", data.studentId);
+        console.error("Student not found with studentId:", data.studentId);
         return { success: false, error: true };
       }
+      
+      studentDatabaseId = studentExists.id;
+      console.log("Student found for update:", studentExists.name, studentExists.surname, "ID:", studentExists.studentId);
     }
 
     // Build update data
@@ -165,9 +174,9 @@ export const updateParent = async (state: any, data: ParentSchema) => {
     };
 
     // Only update student relationship if studentId is provided
-    if (data.studentId) {
+    if (data.studentId && studentDatabaseId) {
       updateData.students = {
-        set: [{ id: data.studentId }],
+        set: [{ id: studentDatabaseId }], // Use database ID for the relation
       };
     }
 
@@ -177,7 +186,7 @@ export const updateParent = async (state: any, data: ParentSchema) => {
       data: updateData,
       include: {
         students: {
-          select: { id: true, name: true, surname: true }
+          select: { id: true, studentId: true, name: true, surname: true }
         },
       },
     });

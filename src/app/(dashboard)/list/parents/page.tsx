@@ -23,7 +23,7 @@ const ParentListPage = async ({
       accessor: "info",
     },
     {
-      header: "Student Names",
+      header: "Student IDs", // Changed from "Student Names" to "Student IDs"
       accessor: "students",
       className: "hidden md:table-cell",
     },
@@ -59,7 +59,8 @@ const ParentListPage = async ({
         </div>
       </td>
       <td className="hidden md:table-cell">
-        {item.students.map((student) => student.name).join(", ")}
+        {/* Changed from student.name to student.studentId */}
+        {item.students.map((student) => student.studentId).join(", ")}
       </td>
       <td className="hidden md:table-cell">{item.phone}</td>
       <td className="hidden md:table-cell">{item.address}</td>
@@ -97,7 +98,14 @@ const ParentListPage = async ({
     prisma.parent.findMany({
       where: query,
       include: {
-        students: true,
+        students: {
+          select: {
+            id: true,
+            studentId: true, // Make sure studentId is included in the query
+            name: true,
+            surname: true,
+          }
+        },
       },
       take: ITEM_PER_PAGE,
       skip: ITEM_PER_PAGE * (p - 1),

@@ -55,7 +55,7 @@ export default function ParentForm({
   type: "create" | "update";
   data?: any;
   setOpen: Dispatch<SetStateAction<boolean>>;
-  relatedData?: { students: { id: string; name: string; surname: string }[] };
+  relatedData?: { students: { id: string; name: string; surname: string; studentId: string }[] };
 }) {
   const {
     register,
@@ -110,8 +110,8 @@ export default function ParentForm({
           }
 
           // Validate studentId - this is crucial for the Prisma relation
-          const studentId = formData.get("studentId")?.toString();
-          if (!studentId) {
+          const studentIdValue = formData.get("studentId")?.toString();
+          if (!studentIdValue) {
             toast.error("Please select a student");
             console.error("❌ No student selected");
             return;
@@ -125,7 +125,7 @@ export default function ParentForm({
             email: formData.get("email")?.toString() || "",
             phone: formData.get("phone")?.toString() || "",
             address: formData.get("address")?.toString() || "",
-            studentId: studentId, // This is the key field that was missing!
+            studentId: studentIdValue, // This will now be the custom studentId field
           };
 
           // Add ID for updates
@@ -270,7 +270,7 @@ export default function ParentForm({
             Student & Security Information
           </h2>
           <div className="space-y-4">
-            {/* Student Selection */}
+            {/* Student Selection - Now using studentId */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Select Student <span className="text-red-500">*</span>
@@ -278,12 +278,12 @@ export default function ParentForm({
               <select
                 className="w-full p-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-indigo-400 transition text-base"
                 {...register("studentId", { required: "Student selection is required" })}
-                defaultValue={data?.studentId || data?.students?.[0]?.id || ""}
+                defaultValue={data?.studentId || ""}
               >
                 <option value="">Select a student</option>
                 {relatedData?.students?.map((student) => (
-                  <option key={student.id} value={student.id}>
-                    {student.name} {student.surname}
+                  <option key={student.studentId} value={student.studentId}>
+                    {student.studentId} - {student.name} {student.surname}
                   </option>
                 ))}
               </select>
