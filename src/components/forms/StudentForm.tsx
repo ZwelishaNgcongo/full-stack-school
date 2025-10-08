@@ -45,11 +45,12 @@ const InputField = ({
 
 interface ClassData {
   id: number;
-  name: string; // e.g. "1A", "RB", "12C"
+  name: string;
+  grade?: { level: number }; // Include grade info
 }
 interface GradeData {
   id: number;
-  level: number; // 0 => R, 1..12
+  level: number;
 }
 interface RelatedData {
   classes: ClassData[];
@@ -81,29 +82,35 @@ const StudentForm = ({
 
   const router = useRouter();
 
-  // numeric IDs required by Prisma
   const [selectedGradeId, setSelectedGradeId] = useState<number | null>(null);
   const [selectedClassId, setSelectedClassId] = useState<number | null>(null);
-
-  // selected class letter (A-F) for UI
-  const [selectedClassLetter, setSelectedClassLetter] = useState<string | null>(
-    null
-  );
-
-  // whether the currently selected class (e.g. "1B") exists in DB
+  const [selectedClassLetter, setSelectedClassLetter] = useState<string | null>(null);
   const [classExists, setClassExists] = useState<boolean | null>(null);
 
-  // Pre-select when editing
+  // Pre-select when editing - FIXED VERSION
   useEffect(() => {
     if (!relatedData) return;
-    if (data?.gradeId) setSelectedGradeId(Number(data.gradeId));
-    if (data?.classId) setSelectedClassId(Number(data.classId));
+    
+    // Ensure we're working with numbers, not strings
+    if (data?.gradeId) {
+      const numericGradeId = Number(data.gradeId);
+      console.log('🔍 Setting gradeId:', numericGradeId, 'from data:', data.gradeId);
+      setSelectedGradeId(numericGradeId);
+    }
+    
+    if (data?.classId) {
+      const numericClassId = Number(data.classId);
+      console.log('🔍 Setting classId:', numericClassId, 'from data:', data.classId);
+      setSelectedClassId(numericClassId);
+    }
 
-    // also try parsing class name to preselect letter
+    // Parse class name to preselect letter
     if (data?.class?.name) {
-      const match = data.class.name.match(/^(\d+|R)([A-F])$/i);
+      const match = data.class.name.match(/^(R|\d{1,2})([A-F])$/i);
       if (match) {
-        setSelectedClassLetter(match[2].toUpperCase());
+        const letter = match[2].toUpperCase();
+        console.log('🔍 Setting class letter:', letter, 'from class name:', data.class.name);
+        setSelectedClassLetter(letter);
       }
     }
   }, [data, relatedData]);
@@ -136,26 +143,37 @@ const StudentForm = ({
     setOpen(false);
   };
 
-  // prepare grades/classes helpers from relatedData
+  // Sort grades by level
   const sortedGrades = (relatedData?.grades ?? []).slice().sort((a, b) => a.level - b.level);
 
-  const selectedGradeLevel =
-    selectedGradeId != null
-      ? sortedGrades.find((g) => g.id === selectedGradeId)?.level
-      : undefined;
+  // Find the selected grade's level - FIXED
+  const selectedGradeLevel = selectedGradeId != null
+    ? sortedGrades.find((g) => g.id === selectedGradeId)?.level
+    : undefined;
 
-  // letters A-F always shown in UI after grade selected
+  // Debug log
+  useEffect(() => {
+    if (selectedGradeId !== null) {
+      const foundGrade = sortedGrades.find((g) => g.id === selectedGradeId);
+      console.log('🔍 Selected Grade ID:', selectedGradeId);
+      console.log('🔍 Found Grade:', foundGrade);
+      console.log('🔍 Grade Level:', selectedGradeLevel);
+    }
+  }, [selectedGradeId, selectedGradeLevel, sortedGrades]);
+
   const CLASS_LETTERS = ["A", "B", "C", "D", "E", "F"];
 
-  // helper to find matching class record id from relatedData
+  // Find matching class record
   const findClassRecordFor = (gradeLevel: number | undefined, letter: string) => {
     if (!relatedData?.classes || gradeLevel == null) return undefined;
-    const gradePrefix = gradeLevel === 0 ? "R" : `${gradeLevel}`;
+    const gradePrefix = gradeLevel === 0 ? "R" : String(gradeLevel);
     const targetName = `${gradePrefix}${letter}`;
-    return relatedData.classes.find((c) => c.name.toUpperCase() === targetName.toUpperCase());
+    
+    const found = relatedData.classes.find((c) => c.name.toUpperCase() === targetName.toUpperCase());
+    console.log('🔍 Looking for class:', targetName, '- Found:', found);
+    return found;
   };
 
-  // when user changes class letter selection, attempt to map to DB class id
   const handleClassLetterSelect = (letter: string | null) => {
     setSelectedClassLetter(letter);
     if (!letter || selectedGradeLevel == null) {
@@ -166,16 +184,18 @@ const StudentForm = ({
 
     const record = findClassRecordFor(selectedGradeLevel, letter);
     if (record) {
+      console.log('✅ Class exists:', record.name, 'ID:', record.id);
       setSelectedClassId(record.id);
       setClassExists(true);
     } else {
+      console.log('❌ Class does not exist');
       setSelectedClassId(null);
-      setClassExists(false); // available for UI feedback, but submission blocked
+      setClassExists(false);
     }
   };
 
-  // when user changes grade, reset class selection
   const handleGradeChange = (gradeId: number | null) => {
+    console.log('📝 Grade changed to:', gradeId);
     setSelectedGradeId(gradeId);
     setSelectedClassId(null);
     setSelectedClassLetter(null);
@@ -189,53 +209,43 @@ const StudentForm = ({
         action={async (formData: FormData) => {
           console.log("🚀 Form submission started");
           
-          // Validate required selections first
           if (!selectedGradeId) {
             toast.error("Please select a grade");
-            console.error("❌ No grade selected");
             return;
           }
           if (!selectedClassId) {
-            const gradePrefix = selectedGradeLevel === 0 ? "R" : `${selectedGradeLevel}`;
+            const gradePrefix = selectedGradeLevel === 0 ? "R" : String(selectedGradeLevel);
             const missingName = `${gradePrefix}${selectedClassLetter ?? ""}`;
             toast.error(
               selectedClassLetter
                 ? `Class ${missingName} not found in database. Please create it before adding students.`
                 : "Please select a class."
             );
-            console.error("❌ No class selected");
             return;
           }
 
-          // Validate form data exists
           const requiredFields = ['name', 'surname', 'birthday', 'sex'];
           const missingFields = requiredFields.filter(field => !formData.get(field));
           
           if (missingFields.length > 0) {
             toast.error(`Missing required fields: ${missingFields.join(', ')}`);
-            console.error("❌ Missing fields:", missingFields);
             return;
           }
 
-          // Check sex field specifically
           const sexValue = formData.get("sex")?.toString();
           if (!sexValue || (sexValue !== "MALE" && sexValue !== "FEMALE")) {
             toast.error("Please select a valid gender (Male or Female)");
-            console.error("❌ Invalid sex value:", sexValue);
             return;
           }
 
-          // Check username/studentId
           const usernameValue = formData.get("username")?.toString();
           const studentIdValue = usernameValue || generateStudentId();
           
           if (!studentIdValue) {
             toast.error("Student ID/Username is required");
-            console.error("❌ No username/studentId");
             return;
           }
 
-          // Build and validate data object
           const dataObject = {
             id: formData.get("id")?.toString() || undefined,
             studentId: studentIdValue,
@@ -255,14 +265,11 @@ const StudentForm = ({
               : undefined,
           };
 
-          console.log("📝 Data object built:", dataObject);
+          console.log("📝 Submitting data:", dataObject);
 
           try {
-            // Validate with Zod schema
             const validatedData = studentSchema.parse(dataObject);
-            console.log("✅ Zod validation passed:", validatedData);
-            
-            // Submit to server action
+            console.log("✅ Zod validation passed");
             await formAction(validatedData);
           } catch (error) {
             if (error instanceof z.ZodError) {
@@ -270,7 +277,6 @@ const StudentForm = ({
               error.errors.forEach(err => {
                 toast.error(`${err.path.join('.')}: ${err.message}`);
               });
-              return;
             } else {
               console.error("❌ Unexpected error:", error);
               toast.error("Failed to submit form");
@@ -278,7 +284,6 @@ const StudentForm = ({
           }
         }}
       >
-        {/* Hidden inputs to keep formData consistent (optional) */}
         <input type="hidden" name="gradeId" value={selectedGradeId ?? ""} />
         <input type="hidden" name="classId" value={selectedClassId ?? ""} />
 
@@ -386,7 +391,6 @@ const StudentForm = ({
             Grade & Class Assignment *
           </span>
 
-          {/* If grades aren't seeded, show message */}
           {!relatedData?.grades?.length ? (
             <div className="p-4 bg-red-50 border border-red-300 rounded-lg">
               <span className="text-red-700">
@@ -415,9 +419,15 @@ const StudentForm = ({
                     </option>
                   ))}
                 </select>
+                {/* Debug info - remove in production */}
+                {selectedGradeId && (
+                  <p className="mt-1 text-xs text-gray-500">
+                    Selected ID: {selectedGradeId}, Level: {selectedGradeLevel}
+                  </p>
+                )}
               </div>
 
-              {/* Class select (letters A-F always available) */}
+              {/* Class select */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Class (A–F) *
@@ -442,7 +452,6 @@ const StudentForm = ({
                   ))}
                 </select>
 
-                {/* Feedback if class doesn't exist in DB */}
                 {classExists === false && selectedClassLetter && (
                   <p className="mt-2 text-sm text-yellow-700 bg-yellow-50 p-2 rounded border border-yellow-200">
                     Class{" "}
@@ -454,10 +463,9 @@ const StudentForm = ({
                   </p>
                 )}
 
-                {/* Informational note when exists */}
                 {classExists === true && (
                   <p className="mt-2 text-sm text-green-700 bg-green-50 p-2 rounded border border-green-200">
-                    Class exists in DB and will be used.
+                    ✓ Class exists (ID: {selectedClassId})
                   </p>
                 )}
               </div>
@@ -505,11 +513,10 @@ const StudentForm = ({
           </div>
         </div>
 
-        {/* Server Error */}
         {state.error && (
           <div className="p-4 bg-red-100 border border-red-300 rounded-lg">
             <span className="text-red-700 font-medium">
-              Something went wrong! Please check the console for details and try again.
+              Something went wrong! Please check the console for details.
             </span>
           </div>
         )}

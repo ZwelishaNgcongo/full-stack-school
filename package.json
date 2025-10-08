@@ -2,7 +2,6 @@
   "name": "school-managment",
   "version": "0.1.0",
   "private": true,
-  
   "prisma": {
     "seed": "prisma/seed.js"
   },
@@ -11,7 +10,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-     "db:seed": "npx prisma db seed",
+    "db:seed": "npx prisma db seed",
     "db:reset": "npx prisma migrate reset --force"
   },
   "dependencies": {
@@ -33,16 +32,14 @@
     "zod": "^3.23.8"
   },
   "devDependencies": {
-    "@types/node": "^20",
-    "@types/react": "^18",
-    "@types/react-dom": "^18",
+    "@types/node": "^20.19.19",
+    "@types/react": "^18.3.25",
+    "@types/react-dom": "^18.3.7",
     "eslint": "^8",
     "eslint-config-next": "14.2.5",
     "postcss": "^8",
     "tailwindcss": "^3.4.1",
     "ts-node": "^10.9.2",
-    "typescript": "^5"
+    "typescript": "^5.9.3"
   }
-  
-  
 }
