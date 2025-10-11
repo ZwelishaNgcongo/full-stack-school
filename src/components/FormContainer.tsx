@@ -47,6 +47,19 @@ const FormContainer = async ({ table, type, data, id }: FormContainerProps) => {
           select: { id: true, name: true, surname: true },
         });
         relatedData = { teachers: classTeachers, grades: classGrades };
+        
+        // ✅ DEBUGGING: Log the data being passed to the form
+        if (type === "update" && data) {
+          console.log('FormContainer - Data passed to ClassForm:', {
+            id: data.id,
+            name: data.name,
+            capacity: data.capacity,
+            supervisorId: data.supervisorId,
+            grade: data.grade,
+            classLetter: data.classLetter,
+            studentCount: data.studentCount,
+          });
+        }
         break;
       case "teacher":
         const teacherSubjects = await prisma.subject.findMany({

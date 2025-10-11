@@ -15,19 +15,22 @@ type ClassWithDetails = {
   id: number;
   name: string;
   capacity: number;
+  supervisorId: string | null;
   supervisor: { name: string; surname: string } | null;
   grade: { level: number };
+  gradeId: number;
   students: Array<{
     id: string;
     studentId: string;
     name: string;
     surname: string;
     sex: "MALE" | "FEMALE";
-    email: string | null; // ✅ FIX: matches Prisma return type
+    email: string | null;
   }>;
   _count: {
     students: number;
   };
+  description?: string;
 };
 
 async function getClasses(query: any, p: number): Promise<[ClassWithDetails[], number]> {
@@ -105,16 +108,48 @@ const ClassListPage = async ({ searchParams }: ClassListPageProps) => {
     const totalStudents = item._count.students;
     const capacityPercentage = (totalStudents / item.capacity) * 100;
 
-    // Prepare form data for update by excluding nested relation objects to prevent serialization/rendering issues
-    const { grade, supervisor, _count, ...scalarItem } = item;
-    const formData = {
-      ...scalarItem,
-      students: item.students,
-      studentCount: totalStudents,
-      // Optionally add flattened values if needed by the form for display
-      // gradeLevel: grade.level === 0 ? 'R' : grade.level,
-      // supervisorName: supervisor ? `${supervisor.name} ${supervisor.surname}` : null,
+    // ✅ FIXED: Extract only class letter from name, use database grade.level for grade
+    const parseClassName = (className: string): { classLetter: string } => {
+      // Match pattern: optional digits or 'R', followed by a letter
+      const match = className.match(/^(?:R|\d{1,2})([A-F])$/i);
+      
+      if (match) {
+        return {
+          classLetter: match[1].toUpperCase() // "A", "B", "C", etc.
+        };
+      }
+      
+      // Fallback if pattern doesn't match
+      console.warn(`⚠️ Could not parse class name: ${className}`);
+      return {
+        classLetter: 'A'
+      };
     };
+
+    const { classLetter } = parseClassName(item.name);
+    
+    // ✅ CRITICAL FIX: Use item.grade.level directly from database
+    // Convert level to the format expected by the form:
+    // - level 0 → "R"
+    // - level 1 → "1"
+    // - level 2 → "2", etc.
+    const gradeForForm = item.grade.level === 0 ? "R" : item.grade.level.toString();
+
+    // ✅ FIXED: Prepare complete form data with CORRECT grade from database
+    const formData = {
+      id: item.id,
+      name: item.name,
+      capacity: item.capacity,
+      supervisorId: item.supervisorId || '', // ✅ Keep empty string if null
+      gradeId: item.gradeId,
+      grade: gradeForForm, // ✅ Use actual grade level from database
+      classLetter: classLetter, // ✅ Extracted from class name
+      studentCount: totalStudents,
+      description: item.description || '',
+    };
+
+    // ✅ DEBUG: Log the data being passed
+    console.log('FormContainer - Data passed to ClassForm:', formData);
 
     return (
       <tr 
