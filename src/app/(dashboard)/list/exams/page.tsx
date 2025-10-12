@@ -8,7 +8,7 @@ import Image from "next/image";
 
 // Temporary auth replacement
 async function getCurrentUser(): Promise<{ role: "admin" | "teacher" | "student" | "parent" | null; id?: string }> {
-  return { role: null, id: undefined };
+  return { role: "admin", id: "mock-user-id" }; // ✅ Set to admin to see all features
 }
 
 // ✅ Fix: Match the shape you're actually selecting

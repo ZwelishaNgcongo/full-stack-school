@@ -519,6 +519,77 @@ export const deleteStudent = async (currentState: CurrentState, data: FormData) 
   }
 };
 
+/* ------------------- LESSON ------------------- */
+
+export const createLesson = async (currentState: CurrentState, data: any) => {
+  try {
+    await prisma.lesson.create({
+      data: {
+        name: data.name,
+        day: data.day,
+        startTime: new Date(`1970-01-01T${data.startTime}:00`),
+        endTime: new Date(`1970-01-01T${data.endTime}:00`),
+        subjectId: Number(data.subjectId),
+        classId: Number(data.classId),
+        teacherId: data.teacherId,
+      },
+    });
+
+    revalidatePath("/list/lessons");
+    return { success: true, error: false };
+  } catch (err) {
+    console.error("createLesson error:", err);
+    return { success: false, error: true };
+  }
+};
+
+export const updateLesson = async (currentState: CurrentState, data: any) => {
+  try {
+    if (!data.id) {
+      return { success: false, error: true };
+    }
+
+    await prisma.lesson.update({
+      where: {
+        id: Number(data.id),
+      },
+      data: {
+        name: data.name,
+        day: data.day,
+        startTime: new Date(`1970-01-01T${data.startTime}:00`),
+        endTime: new Date(`1970-01-01T${data.endTime}:00`),
+        subjectId: Number(data.subjectId),
+        classId: Number(data.classId),
+        teacherId: data.teacherId,
+      },
+    });
+
+    revalidatePath("/list/lessons");
+    return { success: true, error: false };
+  } catch (err) {
+    console.error("updateLesson error:", err);
+    return { success: false, error: true };
+  }
+};
+
+export const deleteLesson = async (currentState: CurrentState, data: FormData) => {
+  const id = Number(data.get("id"));
+  
+  try {
+    await prisma.lesson.delete({
+      where: {
+        id: id,
+      },
+    });
+
+    revalidatePath("/list/lessons");
+    return { success: true, error: false };
+  } catch (err) {
+    console.error("deleteLesson error:", err);
+    return { success: false, error: true };
+  }
+};
+
 /* ------------------- EXAM ------------------- */
 
 export const createExam = async (currentState: CurrentState, data: ExamSchema) => {

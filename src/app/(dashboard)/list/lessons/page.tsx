@@ -9,7 +9,7 @@ import { Prisma } from "@prisma/client";
 
 // Mock auth to remove Clerk dependency
 async function getCurrentUser(): Promise<{ role: "admin" | "teacher" | "student" | "parent" | null; id?: string }> {
-  return { role: null, id: undefined };
+  return { role: "admin", id: "mock-user-id" }; // ✅ FIXED: Changed from null to "admin"
 }
 
 // ✅ Use Prisma type that matches the query shape

@@ -6,7 +6,8 @@ import {
   deleteStudent,
   deleteSubject,
   deleteTeacher,
-  deleteParent, // Add this import
+  deleteParent,
+  deleteLesson,
 } from "@/lib/actions";
 import dynamic from "next/dynamic";
 import Image from "next/image";
@@ -37,9 +38,9 @@ const deleteActionMap: Record<TableType, any> = {
   teacher: deleteTeacher,
   student: deleteStudent,
   exam: deleteExam,
-  parent: deleteParent, // Fixed: was pointing to deleteSubject
+  parent: deleteParent,
   // TODO: OTHER DELETE ACTIONS
-  lesson: deleteSubject,
+  lesson: deleteLesson,
   assignment: deleteSubject,
   result: deleteSubject,
   attendance: deleteSubject,
@@ -63,8 +64,11 @@ const ClassForm = dynamic(() => import("./forms/ClassForm"), {
 const ExamForm = dynamic(() => import("./forms/ExamForm"), {
   loading: () => <h1>Loading...</h1>,
 });
-// PARENT FORM IMPORT
 const ParentForm = dynamic(() => import("./forms/ParentForm"), {
+  loading: () => <h1>Loading...</h1>,
+});
+// ✅ ADD LESSON FORM IMPORT
+const LessonForm = dynamic(() => import("./forms/lessonform"), {
   loading: () => <h1>Loading...</h1>,
 });
 
@@ -117,9 +121,17 @@ const forms: Record<
       relatedData={relatedData}
     />
   ),
-  // PARENT FORM IN THE FORMS OBJECT
   parent: (setOpen, type, data, relatedData) => (
     <ParentForm
+      type={type}
+      data={data}
+      setOpen={setOpen}
+      relatedData={relatedData}
+    />
+  ),
+  // ✅ ADD LESSON FORM TO THE FORMS OBJECT
+  lesson: (setOpen, type, data, relatedData) => (
+    <LessonForm
       type={type}
       data={data}
       setOpen={setOpen}
