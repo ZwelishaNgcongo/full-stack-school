@@ -5,13 +5,14 @@ import TableSearch from "@/components/TableSearch";
 import prisma from "@/lib/prisma";
 import { ITEM_PER_PAGE } from "@/lib/settings";
 import Image from "next/image";
+import Link from "next/link";
 
 // Temporary auth replacement
 async function getCurrentUser(): Promise<{ role: "admin" | "teacher" | "student" | "parent" | null; id?: string }> {
-  return { role: "admin", id: "mock-user-id" }; // ✅ Set to admin to see all features
+  return { role: "admin", id: "mock-user-id" };
 }
 
-// ✅ Fix: Match the shape you're actually selecting
+// Fix: Match the shape you're actually selecting
 type ExamWithLessonLite = {
   id: number;
   title: string;
@@ -114,6 +115,18 @@ const ExamListPage = async ({ searchParams }: ExamListPageProps) => {
             <button className="w-8 h-8 flex items-center justify-center rounded-full bg-lamaYellow">
               <Image src="/sort.png" alt="" width={14} height={14} />
             </button>
+            
+            {/* Timetable Button */}
+            <Link 
+              href="/list/exams/timetable"
+              className="px-4 py-2 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white rounded-lg font-semibold shadow-md hover:shadow-lg transition-all duration-300 transform hover:-translate-y-0.5 flex items-center gap-2"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+              </svg>
+              <span className="hidden sm:inline">Timetable</span>
+            </Link>
+
             {(role === "admin" || role === "teacher") && <FormContainer table="exam" type="create" />}
           </div>
         </div>
