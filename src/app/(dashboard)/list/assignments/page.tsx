@@ -7,7 +7,9 @@ import { ITEM_PER_PAGE } from "@/lib/settings";
 import Image from "next/image";
 
 async function getCurrentUser(): Promise<{ id: string | null; role: "admin" | "teacher" | "student" | "parent" | null }> {
-  return { id: null, role: null };
+  // TODO: Implement actual user authentication
+  // For testing, return admin role
+  return { id: null, role: "admin" };
 }
 
 type SimplifiedAssignment = {
@@ -49,6 +51,20 @@ async function getAssignments(query: any, p: number): Promise<[SimplifiedAssignm
   return [rawData, count];
 }
 
+// Fetch lessons for the form dropdown
+async function getLessons() {
+  const lessons = await prisma.lesson.findMany({
+    select: {
+      id: true,
+      name: true,
+      subject: { select: { name: true } },
+      teacher: { select: { name: true, surname: true } },
+      class: { select: { name: true } },
+    },
+  });
+  return lessons;
+}
+
 interface AssignmentListPageProps {
   searchParams: { [key: string]: string | undefined };
 }
@@ -81,6 +97,9 @@ const AssignmentListPage = async ({ searchParams }: AssignmentListPageProps) => 
   }
 
   const [data, count] = await getAssignments(query, p);
+  
+  // Fetch lessons for the form
+  const lessons = await getLessons();
 
   const columns = [
     { header: "Subject Name", accessor: "name" },
@@ -99,7 +118,7 @@ const AssignmentListPage = async ({ searchParams }: AssignmentListPageProps) => 
       {(role === "admin" || role === "teacher") && (
         <td>
           <div className="flex items-center gap-2">
-            <FormModal table="assignment" type="update" data={item} />
+            <FormModal table="assignment" type="update" data={item} relatedData={{ lessons }} />
             <FormModal table="assignment" type="delete" id={item.id} />
           </div>
         </td>
@@ -120,7 +139,9 @@ const AssignmentListPage = async ({ searchParams }: AssignmentListPageProps) => 
             <button className="btn-icon">
               <Image src="/sort.png" alt="" width={14} height={14} />
             </button>
-            {(role === "admin" || role === "teacher") && <FormModal table="assignment" type="create" />}
+            {(role === "admin" || role === "teacher") && (
+              <FormModal table="assignment" type="create" relatedData={{ lessons }} />
+            )}
           </div>
         </div>
       </div>

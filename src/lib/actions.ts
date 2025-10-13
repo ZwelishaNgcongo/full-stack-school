@@ -858,3 +858,85 @@ export async function bulkAssignStudentsToClass(
     return { success: false, error: true };
   }
 }
+
+export const createAssignment = async (currentState: any, data: any) => {
+  try {
+    await prisma.assignment.create({
+      data: {
+        title: data.title,
+        description: data.description || null,
+        startDate: new Date(data.startDate),
+        dueDate: new Date(data.dueDate),
+        lessonId: Number(data.lessonId),
+      },
+    });
+
+    revalidatePath("/list/assignments");
+    return { success: true, error: false };
+  } catch (err) {
+    console.error("createAssignment error:", err);
+    return { success: false, error: true };
+  }
+};
+
+export const updateAssignment = async (currentState: any, data: any) => {
+  try {
+    if (!data.id) throw new Error("Assignment ID required.");
+
+    await prisma.assignment.update({
+      where: { id: Number(data.id) },
+      data: {
+        title: data.title,
+        description: data.description || null,
+        startDate: new Date(data.startDate),
+        dueDate: new Date(data.dueDate),
+        lessonId: Number(data.lessonId),
+      },
+    });
+
+    revalidatePath("/list/assignments");
+    return { success: true, error: false };
+  } catch (err) {
+    console.error("updateAssignment error:", err);
+    return { success: false, error: true };
+  }
+};
+
+export const deleteAssignment = async (currentState: any, formData: FormData) => {
+  const id = Number(formData.get("id"));
+  try {
+    await prisma.assignment.delete({
+      where: { id },
+    });
+    revalidatePath("/list/assignments");
+    return { success: true, error: false };
+  } catch (err) {
+    console.error("deleteAssignment error:", err);
+    return { success: false, error: true };
+  }
+};
+
+/**
+ * Fetch all lessons for assignment selection
+ */
+export const getAllLessons = async () => {
+  try {
+    const lessons = await prisma.lesson.findMany({
+      select: {
+        id: true,
+        name: true,
+        subject: { select: { name: true } },
+        teacher: { select: { name: true, surname: true } },
+        class: { select: { name: true } },
+      },
+      orderBy: { name: "asc" },
+    });
+    return lessons.map((lesson) => ({
+      id: lesson.id,
+      label: `${lesson.subject.name} - ${lesson.class.name} (${lesson.teacher.name} ${lesson.teacher.surname})`,
+    }));
+  } catch (err) {
+    console.error("getAllLessons error:", err);
+    return [];
+  }
+};
