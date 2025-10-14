@@ -13,19 +13,19 @@ model Admin {
 }
 
 model Student {
-  id          String       @id @default(cuid()) 
-  studentId   String       @unique                // school-assigned student ID
+  id          String       @id @default(cuid())
+  studentId   String       @unique // school-assigned student ID
   username    String       @unique
   name        String
   surname     String
-  email       String?      // ← REMOVED @unique constraint
-  phone       String?      // ← REMOVED @unique constraint  
-  address     String?      
+  email       String? // ← REMOVED @unique constraint
+  phone       String? // ← REMOVED @unique constraint  
+  address     String?
   img         String?
   password    String
   sex         UserSex
   createdAt   DateTime     @default(now())
-  parentId    String?      
+  parentId    String?
   parent      Parent?      @relation(fields: [parentId], references: [id])
   classId     Int
   class       Class        @relation(fields: [classId], references: [id])
@@ -41,8 +41,8 @@ model Teacher {
   username  String    @unique
   name      String
   surname   String
-  email     String?   @unique  // Teachers can keep unique email
-  phone     String?   @unique  // Teachers can keep unique phone
+  email     String?   @unique // Teachers can keep unique email
+  phone     String?   @unique // Teachers can keep unique phone
   address   String
   img       String?
   password  String
@@ -59,7 +59,7 @@ model Parent {
   username  String    @unique
   name      String
   surname   String
-  email     String?   @unique  // Parents can keep unique email
+  email     String?   @unique // Parents can keep unique email
   phone     String?
   address   String?
   password  String
@@ -128,11 +128,12 @@ model Exam {
 }
 
 model Assignment {
-  id        Int      @id @default(autoincrement())
-  title     String
-  startDate DateTime
-  dueDate   DateTime
-
+  id          Int      @id @default(autoincrement())
+  title       String
+  startDate   DateTime
+  dueDate     DateTime
+  description String? // Add this line - it's optional (nullable)
+  fileUrl     String?  // ADD THIS LINE
   lessonId Int
   lesson   Lesson   @relation(fields: [lessonId], references: [id])
   results  Result[]

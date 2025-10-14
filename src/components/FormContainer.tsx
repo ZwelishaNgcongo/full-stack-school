@@ -103,21 +103,44 @@ const FormContainer = async ({ table, type, data, id }: FormContainerProps) => {
           teachers: lessonTeachers 
         };
         break;
-     case "exam":
-  const examLessons = await prisma.lesson.findMany({
-    where: {
-      ...(role === "teacher" ? { teacherId: currentUserId! } : {}),
-    },
-    select: { 
-      id: true, 
-      name: true,
-      subject: { select: { name: true } },
-      class: { select: { name: true } },
-      teacher: { select: { name: true, surname: true } }
-    },
-  });
-  relatedData = { lessons: examLessons };
-  break;
+      case "exam":
+        const examLessons = await prisma.lesson.findMany({
+          where: {
+            ...(role === "teacher" ? { teacherId: currentUserId! } : {}),
+          },
+          select: { 
+            id: true, 
+            name: true,
+            subject: { select: { name: true } },
+            class: { select: { name: true } },
+            teacher: { select: { name: true, surname: true } }
+          },
+        });
+        relatedData = { lessons: examLessons };
+        break;
+      
+      // ✅ MISSING CASE - THIS WAS THE PROBLEM!
+      case "assignment":
+        const assignmentLessons = await prisma.lesson.findMany({
+          where: {
+            ...(role === "teacher" ? { teacherId: currentUserId! } : {}),
+          },
+          select: {
+            id: true,
+            name: true,
+            subject: { select: { id: true, name: true } },
+            class: { 
+              select: { 
+                id: true,
+                name: true,
+                grade: { select: { level: true } }
+              } 
+            },
+            teacher: { select: { id: true, name: true, surname: true } }
+          },
+        });
+        relatedData = { lessons: assignmentLessons };
+        break;
     }
   }
 

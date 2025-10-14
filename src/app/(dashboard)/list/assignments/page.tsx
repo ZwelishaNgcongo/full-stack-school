@@ -5,10 +5,10 @@ import TableSearch from "@/components/TableSearch";
 import prisma from "@/lib/prisma";
 import { ITEM_PER_PAGE } from "@/lib/settings";
 import Image from "next/image";
+import Link from "next/link";
 
 async function getCurrentUser(): Promise<{ id: string | null; role: "admin" | "teacher" | "student" | "parent" | null }> {
   // TODO: Implement actual user authentication
-  // For testing, return admin role
   return { id: null, role: "admin" };
 }
 
@@ -17,6 +17,7 @@ type SimplifiedAssignment = {
   title: string;
   startDate: Date;
   dueDate: Date;
+  fileUrl?: string | null;
   lesson: {
     subject: { name: string };
     teacher: { name: string; surname: string };
@@ -33,6 +34,7 @@ async function getAssignments(query: any, p: number): Promise<[SimplifiedAssignm
         title: true,
         startDate: true,
         dueDate: true,
+        fileUrl: true,
         lesson: {
           select: {
             subject: { select: { name: true } },
@@ -51,7 +53,6 @@ async function getAssignments(query: any, p: number): Promise<[SimplifiedAssignm
   return [rawData, count];
 }
 
-// Fetch lessons for the form dropdown
 async function getLessons() {
   const lessons = await prisma.lesson.findMany({
     select: {
@@ -59,7 +60,12 @@ async function getLessons() {
       name: true,
       subject: { select: { name: true } },
       teacher: { select: { name: true, surname: true } },
-      class: { select: { name: true } },
+      class: { 
+        select: { 
+          name: true,
+          grade: { select: { level: true } }
+        } 
+      },
     },
   });
   return lessons;
@@ -97,8 +103,6 @@ const AssignmentListPage = async ({ searchParams }: AssignmentListPageProps) => 
   }
 
   const [data, count] = await getAssignments(query, p);
-  
-  // Fetch lessons for the form
   const lessons = await getLessons();
 
   const columns = [
@@ -106,25 +110,53 @@ const AssignmentListPage = async ({ searchParams }: AssignmentListPageProps) => 
     { header: "Class", accessor: "class" },
     { header: "Teacher", accessor: "teacher", className: "hidden md:table-cell" },
     { header: "Due Date", accessor: "dueDate", className: "hidden md:table-cell" },
+    { header: "File", accessor: "file", className: "hidden md:table-cell" },
     ...(role === "admin" || role === "teacher" ? [{ header: "Actions", accessor: "action" }] : []),
   ];
 
-  const renderRow = (item: SimplifiedAssignment) => (
-    <tr key={item.id} className="border-b border-gray-200 even:bg-gray-50 hover:bg-purple-50 transition text-sm">
-      <td className="flex items-center gap-4 p-4">{item.lesson.subject.name}</td>
-      <td>{item.lesson.class.name}</td>
-      <td className="hidden md:table-cell">{item.lesson.teacher.name + " " + item.lesson.teacher.surname}</td>
-      <td className="hidden md:table-cell">{new Intl.DateTimeFormat("en-US").format(item.dueDate)}</td>
-      {(role === "admin" || role === "teacher") && (
-        <td>
-          <div className="flex items-center gap-2">
-            <FormModal table="assignment" type="update" data={item} relatedData={{ lessons }} />
-            <FormModal table="assignment" type="delete" id={item.id} />
-          </div>
+  const renderRow = (item: SimplifiedAssignment) => {
+    // Transform data to match what the form expects
+    const formattedData = {
+      id: item.id,
+      title: item.title,
+      startDate: item.startDate,
+      dueDate: item.dueDate,
+      fileUrl: item.fileUrl, // Make sure this is included
+      lessonId: item.lesson ? null : null, // For single lesson support if needed
+      lesson: item.lesson, // Include lesson data
+    };
+
+    return (
+      <tr key={item.id} className="border-b border-gray-200 even:bg-gray-50 hover:bg-purple-50 transition text-sm">
+        <td className="flex items-center gap-4 p-4">{item.lesson.subject.name}</td>
+        <td>{item.lesson.class.name}</td>
+        <td className="hidden md:table-cell">{item.lesson.teacher.name + " " + item.lesson.teacher.surname}</td>
+        <td className="hidden md:table-cell">{new Intl.DateTimeFormat("en-US").format(item.dueDate)}</td>
+        <td className="hidden md:table-cell">
+          {item.fileUrl ? (
+            <Link
+              href={item.fileUrl.startsWith("/") ? item.fileUrl : `/uploads/${item.fileUrl}`}
+              download
+              className="text-purple-600 hover:underline font-medium"
+            >
+              Download
+            </Link>
+          ) : (
+            <span className="text-gray-400 italic">No file</span>
+          )}
         </td>
-      )}
-    </tr>
-  );
+        {(role === "admin" || role === "teacher") && (
+          <td>
+            <div className="flex items-center gap-2">
+              {/* Pass formatted data with fileUrl included */}
+              <FormModal table="assignment" type="update" data={formattedData} relatedData={{ lessons }} />
+              <FormModal table="assignment" type="delete" id={item.id} />
+            </div>
+          </td>
+        )}
+      </tr>
+    );
+  };
 
   return (
     <div className="card flex-1 m-4 mt-0">
@@ -139,6 +171,19 @@ const AssignmentListPage = async ({ searchParams }: AssignmentListPageProps) => 
             <button className="btn-icon">
               <Image src="/sort.png" alt="" width={14} height={14} />
             </button>
+            
+            {/* View Assignments Button */}
+            <Link 
+              href="/list/assignments/view"
+              className="px-4 py-2.5 bg-gradient-to-r from-purple-500 via-pink-500 to-red-500 hover:from-purple-600 hover:via-pink-600 hover:to-red-600 text-white rounded-xl font-semibold transition-all duration-300 shadow-lg hover:shadow-xl flex items-center gap-2 text-sm"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+              </svg>
+              View Assignments
+            </Link>
+            
             {(role === "admin" || role === "teacher") && (
               <FormModal table="assignment" type="create" relatedData={{ lessons }} />
             )}

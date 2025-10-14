@@ -10,6 +10,8 @@ import {
   ParentSchema,
 } from "./formValidationSchemas";
 import prisma from "./prisma";
+import fs from "fs";
+import path from "path";
 
 type CurrentState = { success: boolean; error: boolean };
 
@@ -662,6 +664,241 @@ export const getLessons = async (type: "teacherId" | "classId", id: string | num
   }
 };
 
+/* ------------------- ASSIGNMENT ------------------- */
+// Replace your createAssignment and updateAssignment functions with these:
+
+export const createAssignment = async (currentState: any, formData: FormData) => {
+  try {
+    console.log("=== CREATE ASSIGNMENT START ===");
+
+    // Extract data from FormData
+    const title = formData.get("title") as string;
+    const startDate = new Date(formData.get("startDate") as string);
+    const dueDate = new Date(formData.get("dueDate") as string);
+    const lessonIds = formData.getAll("lessonIds").map(id => Number(id));
+    const file = formData.get("file") as File | null;
+
+    console.log("Parsed data:", { title, startDate, dueDate, lessonIds });
+
+    // Validate required fields
+    if (!title || !startDate || !dueDate || lessonIds.length === 0) {
+      console.error("Missing required fields");
+      return { success: false, error: true };
+    }
+
+    // Validate all lessons exist
+    const lessonsExist = await prisma.lesson.findMany({
+      where: { id: { in: lessonIds } },
+    });
+
+    if (lessonsExist.length !== lessonIds.length) {
+      console.error("Some lessons not found");
+      return { success: false, error: true };
+    }
+
+    console.log("All lessons found:", lessonsExist.map(l => l.name));
+
+    // Handle file upload if present
+    let fileUrl: string | null = null;
+    
+    if (file && file.size > 0) {
+      console.log("Processing file:", file.name, "Size:", file.size);
+      
+      const uploadsDir = path.join(process.cwd(), "public", "uploads", "assignments");
+      
+      if (!fs.existsSync(uploadsDir)) {
+        fs.mkdirSync(uploadsDir, { recursive: true });
+      }
+
+      const timestamp = Date.now();
+      const sanitizedFilename = file.name.replace(/[^a-zA-Z0-9.-]/g, "_");
+      const uniqueFilename = `${timestamp}_${sanitizedFilename}`;
+      
+      const buffer = Buffer.from(await file.arrayBuffer());
+      const filePath = path.join(uploadsDir, uniqueFilename);
+      fs.writeFileSync(filePath, buffer);
+
+      fileUrl = `/uploads/assignments/${uniqueFilename}`;
+      console.log("File saved:", fileUrl);
+    }
+
+    // Create assignment for each selected lesson
+    const createdAssignments = await Promise.all(
+      lessonIds.map(async (lessonId) => {
+        return await prisma.assignment.create({
+          data: {
+            title,
+            startDate,
+            dueDate,
+            lessonId,
+            fileUrl,
+          },
+        });
+      })
+    );
+
+    console.log("Assignments created successfully:", createdAssignments.length);
+    console.log("=== CREATE ASSIGNMENT END ===");
+
+    revalidatePath("/list/assignments");
+    return { success: true, error: false };
+  } catch (err) {
+    console.error("=== CREATE ASSIGNMENT ERROR ===");
+    console.error("Error:", err);
+    if (err instanceof Error) {
+      console.error("Error message:", err.message);
+      console.error("Error stack:", err.stack);
+    }
+    return { success: false, error: true };
+  }
+};
+
+export const updateAssignment = async (currentState: any, formData: FormData) => {
+  try {
+    console.log("=== UPDATE ASSIGNMENT START ===");
+
+    const id = Number(formData.get("id"));
+    const title = formData.get("title") as string;
+    const startDate = new Date(formData.get("startDate") as string);
+    const dueDate = new Date(formData.get("dueDate") as string);
+    const lessonIds = formData.getAll("lessonIds").map(id => Number(id));
+    const file = formData.get("file") as File | null;
+
+    console.log("Parsed data:", { id, title, startDate, dueDate, lessonIds });
+
+    if (!id || !title || !startDate || !dueDate || lessonIds.length === 0) {
+      console.error("Missing required fields");
+      return { success: false, error: true };
+    }
+
+    // Check if assignment exists
+    const existingAssignment = await prisma.assignment.findUnique({
+      where: { id },
+    });
+
+    if (!existingAssignment) {
+      console.error("Assignment not found:", id);
+      return { success: false, error: true };
+    }
+
+    console.log("Existing assignment found:", existingAssignment.title);
+
+    // Handle file upload
+    let fileUrl: string | undefined;
+
+    if (file && file.size > 0) {
+      console.log("Processing new file:", file.name);
+      
+      const uploadsDir = path.join(process.cwd(), "public", "uploads", "assignments");
+      
+      if (!fs.existsSync(uploadsDir)) {
+        fs.mkdirSync(uploadsDir, { recursive: true });
+      }
+
+      const timestamp = Date.now();
+      const sanitizedFilename = file.name.replace(/[^a-zA-Z0-9.-]/g, "_");
+      const uniqueFilename = `${timestamp}_${sanitizedFilename}`;
+
+      const buffer = Buffer.from(await file.arrayBuffer());
+      const filePath = path.join(uploadsDir, uniqueFilename);
+      fs.writeFileSync(filePath, buffer);
+
+      fileUrl = `/uploads/assignments/${uniqueFilename}`;
+      console.log("New file saved:", fileUrl);
+
+      // Delete old file
+      if (existingAssignment.fileUrl) {
+        const oldFilePath = path.join(process.cwd(), "public", existingAssignment.fileUrl);
+        if (fs.existsSync(oldFilePath)) {
+          fs.unlinkSync(oldFilePath);
+          console.log("Old file deleted");
+        }
+      }
+    }
+
+    // Delete existing assignments with the same title (old approach)
+    // or just update the current one if only one lesson is selected
+    if (lessonIds.length === 1) {
+      // Simple update for single lesson
+      const updateData: any = {
+        title,
+        startDate,
+        dueDate,
+        lessonId: lessonIds[0],
+      };
+
+      if (fileUrl) {
+        updateData.fileUrl = fileUrl;
+      }
+
+      await prisma.assignment.update({
+        where: { id },
+        data: updateData,
+      });
+    } else {
+      // For multiple lessons: delete old, create new ones
+      await prisma.assignment.delete({ where: { id } });
+
+      await Promise.all(
+        lessonIds.map(async (lessonId) => {
+          return await prisma.assignment.create({
+            data: {
+              title,
+              startDate,
+              dueDate,
+              lessonId,
+              fileUrl: fileUrl || existingAssignment.fileUrl,
+            },
+          });
+        })
+      );
+    }
+
+    console.log("Assignment(s) updated successfully");
+    console.log("=== UPDATE ASSIGNMENT END ===");
+
+    revalidatePath("/list/assignments");
+    return { success: true, error: false };
+  } catch (err) {
+    console.error("=== UPDATE ASSIGNMENT ERROR ===");
+    console.error("Error:", err);
+    if (err instanceof Error) {
+      console.error("Error message:", err.message);
+      console.error("Error stack:", err.stack);
+    }
+    return { success: false, error: true };
+  }
+};
+
+
+export const deleteAssignment = async (currentState: any, formData: FormData) => {
+  const id = Number(formData.get("id"));
+  try {
+    // Get assignment to delete file
+    const assignment = await prisma.assignment.findUnique({
+      where: { id },
+    });
+
+    if (assignment?.fileUrl) {
+      const filePath = path.join(process.cwd(), "public", assignment.fileUrl);
+      if (fs.existsSync(filePath)) {
+        fs.unlinkSync(filePath);
+        console.log("File deleted:", assignment.fileUrl);
+      }
+    }
+
+    await prisma.assignment.delete({
+      where: { id },
+    });
+    
+    revalidatePath("/list/assignments");
+    return { success: true, error: false };
+  } catch (err) {
+    console.error("deleteAssignment error:", err);
+    return { success: false, error: true };
+  }
+};
+
 /* ------------------- HELPER FUNCTIONS ------------------- */
 
 /**
@@ -859,63 +1096,6 @@ export async function bulkAssignStudentsToClass(
   }
 }
 
-export const createAssignment = async (currentState: any, data: any) => {
-  try {
-    await prisma.assignment.create({
-      data: {
-        title: data.title,
-        description: data.description || null,
-        startDate: new Date(data.startDate),
-        dueDate: new Date(data.dueDate),
-        lessonId: Number(data.lessonId),
-      },
-    });
-
-    revalidatePath("/list/assignments");
-    return { success: true, error: false };
-  } catch (err) {
-    console.error("createAssignment error:", err);
-    return { success: false, error: true };
-  }
-};
-
-export const updateAssignment = async (currentState: any, data: any) => {
-  try {
-    if (!data.id) throw new Error("Assignment ID required.");
-
-    await prisma.assignment.update({
-      where: { id: Number(data.id) },
-      data: {
-        title: data.title,
-        description: data.description || null,
-        startDate: new Date(data.startDate),
-        dueDate: new Date(data.dueDate),
-        lessonId: Number(data.lessonId),
-      },
-    });
-
-    revalidatePath("/list/assignments");
-    return { success: true, error: false };
-  } catch (err) {
-    console.error("updateAssignment error:", err);
-    return { success: false, error: true };
-  }
-};
-
-export const deleteAssignment = async (currentState: any, formData: FormData) => {
-  const id = Number(formData.get("id"));
-  try {
-    await prisma.assignment.delete({
-      where: { id },
-    });
-    revalidatePath("/list/assignments");
-    return { success: true, error: false };
-  } catch (err) {
-    console.error("deleteAssignment error:", err);
-    return { success: false, error: true };
-  }
-};
-
 /**
  * Fetch all lessons for assignment selection
  */
@@ -927,14 +1107,16 @@ export const getAllLessons = async () => {
         name: true,
         subject: { select: { name: true } },
         teacher: { select: { name: true, surname: true } },
-        class: { select: { name: true } },
+        class: { 
+          select: { 
+            name: true,
+            grade: { select: { level: true } }
+          } 
+        },
       },
       orderBy: { name: "asc" },
     });
-    return lessons.map((lesson) => ({
-      id: lesson.id,
-      label: `${lesson.subject.name} - ${lesson.class.name} (${lesson.teacher.name} ${lesson.teacher.surname})`,
-    }));
+    return lessons;
   } catch (err) {
     console.error("getAllLessons error:", err);
     return [];

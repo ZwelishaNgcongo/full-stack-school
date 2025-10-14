@@ -39,16 +39,13 @@ export const teacherSchema = z.object({
     .or(z.literal("")),
   phone: z.string().optional(),
   address: z.string().min(1, { message: "Address is required!" }),
-  img: z.string().optional(), // Make image optional
+  img: z.string().optional(),
   birthday: z.coerce.date({ message: "Birthday is required!" }),
   sex: z.enum(["MALE", "FEMALE"], { message: "Sex is required!" }),
   subjects: z.array(z.string()).optional(),
-  
 });
 
 export type TeacherSchema = z.infer<typeof teacherSchema>;
-
-// Add this to your student schema
 
 export const studentSchema = z.object({
   id: z.string().optional(),
@@ -66,9 +63,8 @@ export const studentSchema = z.object({
   address: z.string().optional(),
   parentId: z.string().optional(),
 });
+
 export type StudentSchema = z.infer<typeof studentSchema>;
-
-
 
 export const examSchema = z.object({
   id: z.coerce.number().optional(),
@@ -80,9 +76,6 @@ export const examSchema = z.object({
 
 export type ExamSchema = z.infer<typeof examSchema>;
 
-
-
-// Updated ParentSchema to include all necessary fields
 export const parentSchema = z.object({
   id: z.string().optional(),
   name: z.string().min(1, { message: "First name is required!" }),
@@ -92,12 +85,11 @@ export const parentSchema = z.object({
   phone: z.string().optional(),
   address: z.string().optional(),
   password: z.string().min(8, { message: "Password must be at least 8 characters!" }).optional(),
-  studentId: z.string().min(1, { message: "Student selection is required!" }), // This was missing!
+  studentId: z.string().min(1, { message: "Student selection is required!" }),
 });
 
 export type ParentSchema = z.infer<typeof parentSchema>;
 
-// Add to formValidationSchemas.ts
 export const lessonSchema = z.object({
   id: z.coerce.number().optional(),
   name: z.string().min(1, { message: "Lesson name is required!" }),
@@ -116,10 +108,11 @@ export type LessonSchema = z.infer<typeof lessonSchema>;
 export const assignmentSchema = z.object({
   id: z.coerce.number().optional(),
   title: z.string().min(1, { message: "Title is required!" }),
-  description: z.string().min(1, { message: "Description is required!" }),
   startDate: z.string().min(1, { message: "Start date is required!" }),
   dueDate: z.string().min(1, { message: "Due date is required!" }),
-  lessonId: z.coerce.number().min(1, { message: "Lesson ID is required!" }),
+  lessonId: z.coerce.number().optional(), // Keep for backward compatibility
+  lessonIds: z.array(z.coerce.number()).optional(), // For multiple lessons
+  file: z.any().optional(),
 });
 
 export type AssignmentSchema = z.infer<typeof assignmentSchema>;
