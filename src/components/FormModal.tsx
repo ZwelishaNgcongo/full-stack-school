@@ -9,6 +9,7 @@ import {
   deleteParent,
   deleteLesson,
   deleteAssignment,
+  deleteResult,
 } from "@/lib/actions";
 import dynamic from "next/dynamic";
 import Image from "next/image";
@@ -42,12 +43,11 @@ const deleteActionMap: Record<TableType, any> = {
   parent: deleteParent,
   lesson: deleteLesson,
   assignment: deleteAssignment,
-  result: deleteSubject,
-  attendance: deleteSubject,
-  event: deleteSubject,
-  announcement: deleteSubject,
+  result: deleteResult, // Fixed - only one result key now
+  attendance: deleteSubject, // You may want to create deleteAttendance
+  event: deleteSubject, // You may want to create deleteEvent
+  announcement: deleteSubject, // You may want to create deleteAnnouncement
 };
-
 // USE LAZY LOADING
 const TeacherForm = dynamic(() => import("./forms/TeacherForm"), {
   loading: () => <h1>Loading...</h1>,
@@ -71,6 +71,9 @@ const LessonForm = dynamic(() => import("./forms/lessonform"), {
   loading: () => <h1>Loading...</h1>,
 });
 const AssignmentForm = dynamic(() => import("./forms/AssignmentForm"), {
+  loading: () => <h1>Loading...</h1>,
+});
+const ResultForm = dynamic(() => import("./forms/ResultForm"), {
   loading: () => <h1>Loading...</h1>,
 });
 
@@ -147,7 +150,16 @@ const forms: Record<
       relatedData={relatedData}
     />
   ),
+  result: (setOpen, type, data, relatedData) => (
+    <ResultForm
+      type={type}
+      data={data}
+      setOpen={setOpen}
+      relatedData={relatedData}
+    />
+  ),
 };
+
 
 // Separate Delete Form Component
 const DeleteForm = ({

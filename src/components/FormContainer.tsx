@@ -141,6 +141,93 @@ const FormContainer = async ({ table, type, data, id }: FormContainerProps) => {
         });
         relatedData = { lessons: assignmentLessons };
         break;
+        case "result":
+  const resultExams = await prisma.exam.findMany({
+    where: {
+      ...(role === "teacher" ? { lesson: { teacherId: currentUserId! } } : {}),
+    },
+    select: {
+      id: true,
+      title: true,
+      startTime: true,
+      lesson: {
+        select: {
+          id: true,
+          name: true,
+          subject: { select: { id: true, name: true } },
+          class: {
+            select: {
+              id: true,
+              name: true,
+              students: {
+                select: {
+                  id: true,
+                  studentId: true,
+                  name: true,
+                  surname: true,
+                },
+                orderBy: [
+                  { surname: "asc" },
+                  { name: "asc" },
+                ],
+              },
+            },
+          },
+          teacher: { select: { id: true, name: true, surname: true } },
+        },
+      },
+    },
+    orderBy: { startTime: "desc" },
+  });
+
+  const resultAssignments = await prisma.assignment.findMany({
+    where: {
+      ...(role === "teacher" ? { lesson: { teacherId: currentUserId! } } : {}),
+    },
+    select: {
+      id: true,
+      title: true,
+      startDate: true,
+      lesson: {
+        select: {
+          id: true,
+          name: true,
+          subject: { select: { id: true, name: true } },
+          class: {
+            select: {
+              id: true,
+              name: true,
+              students: {
+                select: {
+                  id: true,
+                  studentId: true,
+                  name: true,
+                  surname: true,
+                },
+                orderBy: [
+                  { surname: "asc" },
+                  { name: "asc" },
+                ],
+              },
+            },
+          },
+          teacher: { select: { id: true, name: true, surname: true } },
+        },
+      },
+    },
+    orderBy: { startDate: "desc" },
+  });
+
+  relatedData = {
+    exams: resultExams,
+    assignments: resultAssignments,
+  };
+
+  // If updating, determine which assessment type and populate accordingly
+  if (type === "update" && data) {
+    console.log("FormContainer - Result update data:", data);
+  }
+  break;
     }
   }
 

@@ -149,6 +149,11 @@ model Result {
   assignment   Assignment? @relation(fields: [assignmentId], references: [id])
   studentId    String
   student      Student     @relation(fields: [studentId], references: [id])
+  @@unique([examId, studentId])         // Optional: prevent duplicate exam results
+  @@unique([assignmentId, studentId])   // Optional: prevent duplicate assignment results
+  @@index([studentId])                  // Optional: faster student queries
+  @@index([examId])                     // Optional: faster exam queries
+  @@index([assignmentId])               // Optional: faster assignment queries
 }
 
 model Attendance {
