@@ -7,6 +7,7 @@ import prisma from "@/lib/prisma";
 import { ITEM_PER_PAGE } from "@/lib/settings";
 import { Prisma } from "@prisma/client";
 import Image from "next/image";
+import ViewResults from "@/components/ViewResults"; // Add this import
 
 // ✅ Mock auth method
 async function getCurrentUser(): Promise<{ role: "admin" | "teacher" | "student" | "parent" | null; id?: string }> {
@@ -151,24 +152,34 @@ const ResultListPage = async ({
     .filter(Boolean) as ResultList[];
 
   return (
-    <div className="bg-white p-4 rounded-md flex-1 m-4 mt-0">
-      <div className="flex items-center justify-between">
-        <h1 className="hidden md:block text-lg font-semibold">All Results</h1>
-        <div className="flex flex-col md:flex-row items-center gap-4 w-full md:w-auto">
-          <TableSearch />
-          <div className="flex items-center gap-4 self-end">
-            <button className="w-8 h-8 flex items-center justify-center rounded-full bg-lamaYellow">
-              <Image src="/filter.png" alt="" width={14} height={14} />
-            </button>
-            <button className="w-8 h-8 flex items-center justify-center rounded-full bg-lamaYellow">
-              <Image src="/sort.png" alt="" width={14} height={14} />
-            </button>
-            {(role === "admin" || role === "teacher") && <FormContainer table="result" type="create" />}
+    <div className="flex-1 p-4 flex flex-col gap-4 xl:flex-row">
+      {/* LEFT - Table Section */}
+      <div className="w-full xl:w-2/3">
+        <div className="bg-white p-4 rounded-md flex-1">
+          <div className="flex items-center justify-between">
+            <h1 className="hidden md:block text-lg font-semibold">All Results</h1>
+            <div className="flex flex-col md:flex-row items-center gap-4 w-full md:w-auto">
+              <TableSearch />
+              <div className="flex items-center gap-4 self-end">
+                <button className="w-8 h-8 flex items-center justify-center rounded-full bg-lamaYellow">
+                  <Image src="/filter.png" alt="" width={14} height={14} />
+                </button>
+                <button className="w-8 h-8 flex items-center justify-center rounded-full bg-lamaYellow">
+                  <Image src="/sort.png" alt="" width={14} height={14} />
+                </button>
+                {(role === "admin" || role === "teacher") && <FormContainer table="result" type="create" />}
+              </div>
+            </div>
           </div>
+          <Table columns={columns} renderRow={renderRow} data={data} />
+          <Pagination page={p} count={count} />
         </div>
       </div>
-      <Table columns={columns} renderRow={renderRow} data={data} />
-      <Pagination page={p} count={count} />
+
+      {/* RIGHT - View Results Widget */}
+      <div className="w-full xl:w-1/3">
+        <ViewResults />
+      </div>
     </div>
   );
 };

@@ -1406,3 +1406,183 @@ export const deleteResult = async (currentState: CurrentState, data: FormData) =
   }
 };
 
+export const createReport = async (currentState: any, data: ReportSchema) => {
+  try {
+    console.log("=== CREATE REPORT START ===");
+    console.log("Received data:", data);
+
+    // Validate required fields
+    if (!data.studentId || !data.subjectId || !data.term || !data.year || data.marks === undefined) {
+      console.error("Missing required fields");
+      return { success: false, error: true };
+    }
+
+    // Check if student exists
+    const studentExists = await prisma.student.findUnique({
+      where: { id: data.studentId },
+      include: {
+        class: {
+          include: {
+            grade: true,
+          },
+        },
+      },
+    });
+
+    if (!studentExists) {
+      console.error("Student not found:", data.studentId);
+      return { success: false, error: true };
+    }
+
+    // Check if subject exists
+    const subjectExists = await prisma.subject.findUnique({
+      where: { id: data.subjectId },
+    });
+
+    if (!subjectExists) {
+      console.error("Subject not found:", data.subjectId);
+      return { success: false, error: true };
+    }
+
+    // Check for duplicate report
+    const existingReport = await prisma.report.findFirst({
+      where: {
+        studentId: data.studentId,
+        subjectId: data.subjectId,
+        term: data.term,
+        year: data.year,
+      },
+    });
+
+    if (existingReport) {
+      console.error("Report already exists for this student, subject, term, and year");
+      return { success: false, error: true };
+    }
+
+    // Calculate grade based on marks
+    const calculateGrade = (marks: number): string => {
+      if (marks >= 80) return "A";
+      if (marks >= 70) return "B";
+      if (marks >= 60) return "C";
+      if (marks >= 50) return "D";
+      if (marks >= 40) return "E";
+      return "F";
+    };
+
+    const grade = calculateGrade(data.marks);
+
+    // Create the report
+    const createdReport = await prisma.report.create({
+      data: {
+        studentId: data.studentId,
+        subjectId: data.subjectId,
+        term: data.term,
+        year: data.year,
+        marks: data.marks,
+        grade: grade,
+        teacherComment: data.teacherComment || null,
+      },
+      include: {
+        student: { select: { name: true, surname: true, studentId: true } },
+        subject: { select: { name: true } },
+      },
+    });
+
+    console.log("Report created successfully:", createdReport.id);
+    console.log("=== CREATE REPORT END ===");
+
+    revalidatePath("/list/reports");
+    return { success: true, error: false };
+  } catch (err) {
+    console.error("=== CREATE REPORT ERROR ===");
+    console.error("Error:", err);
+    return { success: false, error: true };
+  }
+};
+
+export const updateReport = async (currentState: any, data: ReportSchema) => {
+  try {
+    console.log("=== UPDATE REPORT START ===");
+    console.log("Received data:", data);
+
+    if (!data.id) {
+      console.error("Report ID is required for update");
+      return { success: false, error: true };
+    }
+
+    // Check if report exists
+    const existingReport = await prisma.report.findUnique({
+      where: { id: data.id },
+    });
+
+    if (!existingReport) {
+      console.error("Report not found:", data.id);
+      return { success: false, error: true };
+    }
+
+    // Calculate grade based on marks
+    const calculateGrade = (marks: number): string => {
+      if (marks >= 80) return "A";
+      if (marks >= 70) return "B";
+      if (marks >= 60) return "C";
+      if (marks >= 50) return "D";
+      if (marks >= 40) return "E";
+      return "F";
+    };
+
+    const grade = calculateGrade(data.marks);
+
+    // Update the report
+    const updatedReport = await prisma.report.update({
+      where: { id: data.id },
+      data: {
+        marks: data.marks,
+        grade: grade,
+        teacherComment: data.teacherComment || null,
+      },
+      include: {
+        student: { select: { name: true, surname: true, studentId: true } },
+        subject: { select: { name: true } },
+      },
+    });
+
+    console.log("Report updated successfully:", updatedReport.id);
+    console.log("=== UPDATE REPORT END ===");
+
+    revalidatePath("/list/reports");
+    return { success: true, error: false };
+  } catch (err) {
+    console.error("=== UPDATE REPORT ERROR ===");
+    console.error("Error:", err);
+    return { success: false, error: true };
+  }
+};
+
+export const deleteReport = async (currentState: CurrentState, data: FormData) => {
+  const id = Number(data.get("id"));
+  
+  try {
+    console.log("Deleting report:", id);
+
+    const reportExists = await prisma.report.findUnique({
+      where: { id },
+    });
+
+    if (!reportExists) {
+      console.error("Report not found:", id);
+      return { success: false, error: true };
+    }
+
+    await prisma.report.delete({
+      where: { id },
+    });
+
+    console.log("Report deleted successfully:", id);
+    
+    revalidatePath("/list/reports");
+    return { success: true, error: false };
+  } catch (err) {
+    console.error("deleteReport error:", err);
+    return { success: false, error: true };
+  }
+};

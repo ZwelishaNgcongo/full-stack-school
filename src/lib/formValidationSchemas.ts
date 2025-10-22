@@ -147,3 +147,18 @@ export const resultSchema = z.object({
 );
 
 export type ResultSchema = z.infer<typeof resultSchema>;
+export const reportSchema = z.object({
+  id: z.coerce.number().optional(),
+  studentId: z.string().min(1, { message: "Student is required!" }),
+  subjectId: z.coerce.number().min(1, { message: "Subject is required!" }),
+  term: z.enum(["TERM1", "TERM2", "TERM3", "TERM4"], {
+    message: "Term is required!",
+  }),
+  year: z.coerce.number().min(2020).max(2100, { message: "Valid year is required!" }),
+  marks: z.coerce.number().min(0).max(100, { message: "Marks must be between 0 and 100!" }),
+  grade: z.string().min(1, { message: "Grade is required!" }),
+  teacherComment: z.string().optional(),
+});
+
+export type ReportSchema = z.infer<typeof reportSchema>;
+
