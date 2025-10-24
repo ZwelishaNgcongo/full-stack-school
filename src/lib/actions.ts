@@ -9,6 +9,8 @@ import {
   TeacherSchema,
   ParentSchema,
   ResultSchema,
+  ReportSchema,
+  examSchema,
 } from "./formValidationSchemas";
 import prisma from "./prisma";
 import fs from "fs";
@@ -595,52 +597,204 @@ export const deleteLesson = async (currentState: CurrentState, data: FormData) =
 
 /* ------------------- EXAM ------------------- */
 
-export const createExam = async (currentState: CurrentState, data: ExamSchema) => {
+export const createExam = async (
+  currentState: { success: boolean; error: boolean },
+  data: ExamSchema
+) => {
   try {
-    await prisma.exam.create({
-      data: {
-        title: data.title,
-        startTime: data.startTime,
-        endTime: data.endTime,
-        lessonId: data.lessonId,
-      },
+    const examData = {
+      title: data.title,
+      startTime: new Date(data.startTime),
+      endTime: new Date(data.endTime),
+    };
+
+    const exam = await prisma.exam.create({
+      data: examData,
     });
+
+    if (data.lessonIds && data.lessonIds.length > 0) {
+      await prisma.examLesson.createMany({
+        data: data.lessonIds.map((lessonId: number) => ({
+          examId: exam.id,
+          lessonId: lessonId,
+        })),
+      });
+    }
+
     revalidatePath("/list/exams");
     return { success: true, error: false };
   } catch (err) {
-    console.error("createExam error:", err);
+    console.error("Error creating exam:", err);
     return { success: false, error: true };
   }
 };
 
-export const updateExam = async (currentState: CurrentState, data: ExamSchema) => {
+export const updateExam = async (
+  currentState: { success: boolean; error: boolean },
+  data: ExamSchema
+) => {
   try {
+    if (!data.id) {
+      return { success: false, error: true };
+    }
+
+    const examData = {
+      title: data.title,
+      startTime: new Date(data.startTime),
+      endTime: new Date(data.endTime),
+    };
+
     await prisma.exam.update({
       where: { id: data.id },
-      data: {
-        title: data.title,
-        startTime: data.startTime,
-        endTime: data.endTime,
-        lessonId: data.lessonId,
-      },
+      data: examData,
     });
+
+    // Delete existing lesson associations
+    await prisma.examLesson.deleteMany({
+      where: { examId: data.id },
+    });
+
+    // Create new lesson associations
+    if (data.lessonIds && data.lessonIds.length > 0) {
+      await prisma.examLesson.createMany({
+        data: data.lessonIds.map((lessonId: number) => ({
+          examId: data.id!,
+          lessonId: lessonId,
+        })),
+      });
+    }
+
     revalidatePath("/list/exams");
     return { success: true, error: false };
   } catch (err) {
-    console.error("updateExam error:", err);
+    console.error("Error updating exam:", err);
     return { success: false, error: true };
   }
 };
 
-export const deleteExam = async (currentState: CurrentState, data: FormData) => {
-  const id = Number(data.get("id"));
+export const deleteExam = async (
+  currentState: { success: boolean; error: boolean },
+  formData: FormData
+) => {
   try {
-    await prisma.exam.delete({ where: { id } });
+    const id = formData.get("id");
+    
+    // The examLesson records will be deleted automatically if you have
+    // onDelete: Cascade in your Prisma schema
+    await prisma.exam.delete({
+      where: { id: Number(id) },
+    });
+
     revalidatePath("/list/exams");
     return { success: true, error: false };
   } catch (err) {
-    console.error("deleteExam error:", err);
+    console.error("Error deleting exam:", err);
     return { success: false, error: true };
+  }
+};
+
+// Helper function to get exam details with all related data
+export const getExamWithDetails = async (examId: number) => {
+  try {
+    const exam = await prisma.exam.findUnique({
+      where: { id: examId },
+      include: {
+        lessons: {
+          include: {
+            lesson: {
+              include: {
+                subject: {
+                  select: {
+                    id: true,
+                    name: true,
+                  },
+                },
+                class: {
+                  select: {
+                    id: true,
+                    name: true,
+                  },
+                },
+                teacher: {
+                  select: {
+                    id: true,
+                    name: true,
+                    surname: true,
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    });
+
+    if (!exam) return null;
+
+    // Transform the data for easier consumption
+    return {
+      id: exam.id,
+      title: exam.title,
+      startTime: exam.startTime,
+      endTime: exam.endTime,
+      lessons: exam.lessons.map((el) => ({
+        id: el.lesson.id,
+        name: el.lesson.name,
+        subject: el.lesson.subject,
+        class: el.lesson.class,
+        teacher: el.lesson.teacher,
+      })),
+    };
+  } catch (err) {
+    console.error("Error getting exam details:", err);
+    return null;
+  }
+};
+
+// Helper function to get all exams with their lessons
+export const getAllExamsWithLessons = async () => {
+  try {
+    const exams = await prisma.exam.findMany({
+      include: {
+        lessons: {
+          include: {
+            lesson: {
+              include: {
+                subject: {
+                  select: {
+                    name: true,
+                  },
+                },
+                class: {
+                  select: {
+                    name: true,
+                    grade: {
+                      select: {
+                        level: true,
+                      },
+                    },
+                  },
+                },
+                teacher: {
+                  select: {
+                    name: true,
+                    surname: true,
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+      orderBy: {
+        startTime: 'desc',
+      },
+    });
+
+    return exams;
+  } catch (err) {
+    console.error("Error getting all exams:", err);
+    return [];
   }
 };
 
@@ -666,7 +820,6 @@ export const getLessons = async (type: "teacherId" | "classId", id: string | num
 };
 
 /* ------------------- ASSIGNMENT ------------------- */
-// Replace your createAssignment and updateAssignment functions with these:
 
 export const createAssignment = async (currentState: any, formData: FormData) => {
   try {
@@ -870,7 +1023,6 @@ export const updateAssignment = async (currentState: any, formData: FormData) =>
     return { success: false, error: true };
   }
 };
-
 
 export const deleteAssignment = async (currentState: any, formData: FormData) => {
   const id = Number(formData.get("id"));
@@ -1124,6 +1276,8 @@ export const getAllLessons = async () => {
   }
 };
 
+/* ------------------- RESULTS ------------------- */
+
 export const createResult = async (currentState: CurrentState, data: ResultSchema) => {
   try {
     console.log("=== CREATE RESULT START ===");
@@ -1220,10 +1374,14 @@ export const createResult = async (currentState: CurrentState, data: ResultSchem
         exam: { 
           select: { 
             title: true,
-            lesson: {
-              select: {
-                subject: { select: { name: true } },
-                class: { select: { name: true } },
+            lessons: {
+              include: {
+                lesson: {
+                  select: {
+                    subject: { select: { name: true } },
+                    class: { select: { name: true } },
+                  }
+                }
               }
             }
           } 
@@ -1339,10 +1497,14 @@ export const updateResult = async (currentState: CurrentState, data: ResultSchem
         exam: { 
           select: { 
             title: true,
-            lesson: {
-              select: {
-                subject: { select: { name: true } },
-                class: { select: { name: true } },
+            lessons: {
+              include: {
+                lesson: {
+                  select: {
+                    subject: { select: { name: true } },
+                    class: { select: { name: true } },
+                  }
+                }
               }
             }
           } 
@@ -1405,6 +1567,8 @@ export const deleteResult = async (currentState: CurrentState, data: FormData) =
     return { success: false, error: true };
   }
 };
+
+/* ------------------- REPORTS ------------------- */
 
 export const createReport = async (currentState: any, data: ReportSchema) => {
   try {

@@ -11,6 +11,16 @@ import Link from "next/link";
 
 type StudentList = Student & { class: Class };
 
+// Helper function to extract grade from class name
+const extractGradeFromClassName = (className: string): string => {
+  // Match patterns like "Grade 10A", "10A", "Grade RA", "RA"
+  const match = className.match(/(?:Grade\s*)?([R0-9]+)[A-F]?/i);
+  if (match) {
+    return match[1]; // Returns "R", "1", "10", "11", "12", etc.
+  }
+  return className; // Fallback to full name if pattern doesn't match
+};
+
 const StudentListPage = async ({
   searchParams,
 }: {
@@ -78,7 +88,7 @@ const StudentListPage = async ({
         </div>
       </td>
       <td className="hidden md:table-cell">{item.studentId}</td>
-      <td className="hidden md:table-cell">{item.class.name[0]}</td>
+      <td className="hidden md:table-cell">{extractGradeFromClassName(item.class.name)}</td>
       <td className="hidden md:table-cell">{item.phone}</td>
       <td className="hidden lg:table-cell">{item.address}</td>
       <td>

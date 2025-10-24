@@ -3,7 +3,7 @@ import FormModal from "./FormModal";
 
 // Mock auth to remove Clerk dependency
 async function getCurrentUser(): Promise<{ role: "admin" | "teacher" | "student" | "parent" | null; id?: string }> {
-  return { role: "admin", id: "mock-user-id" }; // Change to null to test without admin privileges
+  return { role: "admin", id: "mock-user-id" };
 }
 
 export type FormContainerProps = {
@@ -19,19 +19,21 @@ export type FormContainerProps = {
     | "result"
     | "attendance"
     | "event"
-    | "announcement";
+    | "announcement"
+    | "report";
   type: "create" | "update" | "delete";
   data?: any;
   id?: number | string;
+  relatedData?: any; // ✅ ADDED: relatedData to the type definition
 };
 
-const FormContainer = async ({ table, type, data, id }: FormContainerProps) => {
-  let relatedData = {};
+const FormContainer = async ({ table, type, data, id, relatedData: externalRelatedData }: FormContainerProps) => {
+  let relatedData = externalRelatedData || {};
 
   const { role, id: userId } = await getCurrentUser();
   const currentUserId = userId;
 
-  if (type !== "delete") {
+  if (type !== "delete" && !externalRelatedData) {
     switch (table) {
       case "subject":
         const subjectTeachers = await prisma.teacher.findMany({
@@ -39,6 +41,7 @@ const FormContainer = async ({ table, type, data, id }: FormContainerProps) => {
         });
         relatedData = { teachers: subjectTeachers };
         break;
+      
       case "class":
         const classGrades = await prisma.grade.findMany({
           select: { id: true, level: true },
@@ -47,26 +50,15 @@ const FormContainer = async ({ table, type, data, id }: FormContainerProps) => {
           select: { id: true, name: true, surname: true },
         });
         relatedData = { teachers: classTeachers, grades: classGrades };
-        
-        // ✅ DEBUGGING: Log the data being passed to the form
-        if (type === "update" && data) {
-          console.log('FormContainer - Data passed to ClassForm:', {
-            id: data.id,
-            name: data.name,
-            capacity: data.capacity,
-            supervisorId: data.supervisorId,
-            grade: data.grade,
-            classLetter: data.classLetter,
-            studentCount: data.studentCount,
-          });
-        }
         break;
+      
       case "teacher":
         const teacherSubjects = await prisma.subject.findMany({
           select: { id: true, name: true },
         });
         relatedData = { subjects: teacherSubjects };
         break;
+      
       case "student":
         const studentGrades = await prisma.grade.findMany({
           select: { id: true, level: true },
@@ -76,6 +68,7 @@ const FormContainer = async ({ table, type, data, id }: FormContainerProps) => {
         });
         relatedData = { classes: studentClasses, grades: studentGrades };
         break;
+      
       case "parent":
         const parentStudents = await prisma.student.findMany({
           select: { 
@@ -87,6 +80,7 @@ const FormContainer = async ({ table, type, data, id }: FormContainerProps) => {
         });
         relatedData = { students: parentStudents };
         break;
+      
       case "lesson":
         const lessonSubjects = await prisma.subject.findMany({
           select: { id: true, name: true },
@@ -103,6 +97,7 @@ const FormContainer = async ({ table, type, data, id }: FormContainerProps) => {
           teachers: lessonTeachers 
         };
         break;
+      
       case "exam":
         const examLessons = await prisma.lesson.findMany({
           where: {
@@ -112,14 +107,13 @@ const FormContainer = async ({ table, type, data, id }: FormContainerProps) => {
             id: true, 
             name: true,
             subject: { select: { name: true } },
-            class: { select: { name: true } },
+            class: { select: { name: true, gradeId: true } },
             teacher: { select: { name: true, surname: true } }
           },
         });
         relatedData = { lessons: examLessons };
         break;
       
-      // ✅ MISSING CASE - THIS WAS THE PROBLEM!
       case "assignment":
         const assignmentLessons = await prisma.lesson.findMany({
           where: {
@@ -141,93 +135,97 @@ const FormContainer = async ({ table, type, data, id }: FormContainerProps) => {
         });
         relatedData = { lessons: assignmentLessons };
         break;
-        case "result":
-  const resultExams = await prisma.exam.findMany({
-    where: {
-      ...(role === "teacher" ? { lesson: { teacherId: currentUserId! } } : {}),
-    },
-    select: {
-      id: true,
-      title: true,
-      startTime: true,
-      lesson: {
-        select: {
-          id: true,
-          name: true,
-          subject: { select: { id: true, name: true } },
-          class: {
-            select: {
-              id: true,
-              name: true,
-              students: {
-                select: {
-                  id: true,
-                  studentId: true,
-                  name: true,
-                  surname: true,
+      
+      case "result":
+        const resultExams = await prisma.exam.findMany({
+          where: {
+            ...(role === "teacher" ? { lessons: { some: { lesson: { teacherId: currentUserId! } } } } : {}),
+          },
+          select: {
+            id: true,
+            title: true,
+            startTime: true,
+            lessons: {
+              select: {
+                lesson: {
+                  select: {
+                    id: true,
+                    name: true,
+                    subject: { select: { id: true, name: true } },
+                    class: {
+                      select: {
+                        id: true,
+                        name: true,
+                        students: {
+                          select: {
+                            id: true,
+                            studentId: true,
+                            name: true,
+                            surname: true,
+                          },
+                          orderBy: [
+                            { surname: "asc" },
+                            { name: "asc" },
+                          ],
+                        },
+                      },
+                    },
+                    teacher: { select: { id: true, name: true, surname: true } },
+                  },
                 },
-                orderBy: [
-                  { surname: "asc" },
-                  { name: "asc" },
-                ],
               },
             },
           },
-          teacher: { select: { id: true, name: true, surname: true } },
-        },
-      },
-    },
-    orderBy: { startTime: "desc" },
-  });
+          orderBy: { startTime: "desc" },
+        });
 
-  const resultAssignments = await prisma.assignment.findMany({
-    where: {
-      ...(role === "teacher" ? { lesson: { teacherId: currentUserId! } } : {}),
-    },
-    select: {
-      id: true,
-      title: true,
-      startDate: true,
-      lesson: {
-        select: {
-          id: true,
-          name: true,
-          subject: { select: { id: true, name: true } },
-          class: {
-            select: {
-              id: true,
-              name: true,
-              students: {
-                select: {
-                  id: true,
-                  studentId: true,
-                  name: true,
-                  surname: true,
+        const resultAssignments = await prisma.assignment.findMany({
+          where: {
+            ...(role === "teacher" ? { lesson: { teacherId: currentUserId! } } : {}),
+          },
+          select: {
+            id: true,
+            title: true,
+            startDate: true,
+            lesson: {
+              select: {
+                id: true,
+                name: true,
+                subject: { select: { id: true, name: true } },
+                class: {
+                  select: {
+                    id: true,
+                    name: true,
+                    students: {
+                      select: {
+                        id: true,
+                        studentId: true,
+                        name: true,
+                        surname: true,
+                      },
+                      orderBy: [
+                        { surname: "asc" },
+                        { name: "asc" },
+                      ],
+                    },
+                  },
                 },
-                orderBy: [
-                  { surname: "asc" },
-                  { name: "asc" },
-                ],
+                teacher: { select: { id: true, name: true, surname: true } },
               },
             },
           },
-          teacher: { select: { id: true, name: true, surname: true } },
-        },
-      },
-    },
-    orderBy: { startDate: "desc" },
-  });
+          orderBy: { startDate: "desc" },
+        });
 
-  relatedData = {
-    exams: resultExams,
-    assignments: resultAssignments,
-  };
-
-  // If updating, determine which assessment type and populate accordingly
-  if (type === "update" && data) {
-    console.log("FormContainer - Result update data:", data);
-  }
-  break;
+        relatedData = {
+          exams: resultExams,
+          assignments: resultAssignments,
+        };
+        break;
+      
+      case "report":
+        relatedData = {};
+        break;
     }
   }
 

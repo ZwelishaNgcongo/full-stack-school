@@ -17,7 +17,6 @@ import { useRouter } from "next/navigation";
 import { Dispatch, SetStateAction, useEffect, useState } from "react";
 import { useFormState } from "react-dom";
 import { toast } from "react-toastify";
-import { FormContainerProps } from "./FormContainer";
 
 // Define the table types
 type TableType =
@@ -32,9 +31,10 @@ type TableType =
   | "result"
   | "attendance"
   | "event"
-  | "announcement";
+  | "announcement"
+  | "report";
 
-const deleteActionMap: Record<TableType, any> = {
+const deleteActionMap: Record<string, any> = {
   subject: deleteSubject,
   class: deleteClass,
   teacher: deleteTeacher,
@@ -43,11 +43,13 @@ const deleteActionMap: Record<TableType, any> = {
   parent: deleteParent,
   lesson: deleteLesson,
   assignment: deleteAssignment,
-  result: deleteResult, // Fixed - only one result key now
-  attendance: deleteSubject, // You may want to create deleteAttendance
-  event: deleteSubject, // You may want to create deleteEvent
-  announcement: deleteSubject, // You may want to create deleteAnnouncement
+  result: deleteResult,
+  attendance: deleteSubject,
+  event: deleteSubject,
+  announcement: deleteSubject,
+  report: deleteSubject,
 };
+
 // USE LAZY LOADING
 const TeacherForm = dynamic(() => import("./forms/TeacherForm"), {
   loading: () => <h1>Loading...</h1>,
@@ -74,6 +76,9 @@ const AssignmentForm = dynamic(() => import("./forms/AssignmentForm"), {
   loading: () => <h1>Loading...</h1>,
 });
 const ResultForm = dynamic(() => import("./forms/ResultForm"), {
+  loading: () => <h1>Loading...</h1>,
+});
+const ReportForm = dynamic(() => import("./ReportForm"), {
   loading: () => <h1>Loading...</h1>,
 });
 
@@ -158,10 +163,17 @@ const forms: Record<
       relatedData={relatedData}
     />
   ),
+  report: (setOpen, type, data, relatedData) => (
+    <ReportForm
+      type={type}
+      data={data}
+      setOpen={setOpen}
+      relatedData={relatedData}
+    />
+  ),
 };
 
-
-// Separate Delete Form Component
+// Separate Delete Form Component - MOVED OUTSIDE with proper hooks
 const DeleteForm = ({
   table,
   id,
@@ -171,12 +183,13 @@ const DeleteForm = ({
   id: string | number;
   setOpen: Dispatch<SetStateAction<boolean>>;
 }) => {
-  const [state, formAction] = useFormState(deleteActionMap[table], {
+  const deleteAction = deleteActionMap[table];
+  const router = useRouter();
+  
+  const [state, formAction] = useFormState(deleteAction || (() => ({ success: false, error: false })), {
     success: false,
     error: false,
   });
-
-  const router = useRouter();
 
   useEffect(() => {
     if (state.success) {
@@ -186,9 +199,16 @@ const DeleteForm = ({
     }
   }, [state, router, table, setOpen]);
 
+  if (!deleteAction) {
+    return (
+      <div className="p-4">
+        <p className="text-red-600">Delete action not found for {table}</p>
+      </div>
+    );
+  }
+
   return (
     <div className="relative">
-      {/* Close button for delete form */}
       <button
         type="button"
         onClick={() => setOpen(false)}
@@ -213,7 +233,6 @@ const DeleteForm = ({
       <form action={formAction} className="p-4 flex flex-col gap-4">
         <input type="text" name="id" value={id} hidden readOnly />
 
-        {/* Warning icon and message */}
         <div className="flex flex-col items-center gap-3">
           <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center">
             <svg
@@ -250,7 +269,6 @@ const DeleteForm = ({
           </div>
         )}
 
-        {/* Action buttons */}
         <div className="flex gap-3 justify-center pt-2">
           <button
             type="button"
@@ -271,9 +289,11 @@ const DeleteForm = ({
   );
 };
 
-// Update the FormContainerProps interface or create a new interface
-interface FormModalProps extends FormContainerProps {
+interface FormModalProps {
   table: TableType;
+  type: "create" | "update" | "delete";
+  data?: any;
+  id?: number | string;
   relatedData?: any;
 }
 
@@ -294,18 +314,6 @@ const FormModal = ({
 
   const [open, setOpen] = useState(false);
 
-  const renderForm = () => {
-    if (type === "delete" && id) {
-      return <DeleteForm table={table} id={id} setOpen={setOpen} />;
-    } else if (type === "create" || type === "update") {
-      return forms[table]
-        ? forms[table](setOpen, type, data, relatedData)
-        : "Form not found!";
-    } else {
-      return "Form not found!";
-    }
-  };
-
   return (
     <>
       <button
@@ -321,9 +329,47 @@ const FormModal = ({
             className="bg-white rounded-lg shadow-lg relative 
                        w-full max-w-2xl lg:max-w-3xl 
                        max-h-[90vh] overflow-y-auto 
-                       p-6 animate-scaleIn"
+                       p-6"
           >
-            {renderForm()}
+            {type !== "delete" && (
+              <button
+                type="button"
+                onClick={() => setOpen(false)}
+                className="absolute top-4 right-4 w-8 h-8 bg-gray-100 hover:bg-gray-200 border border-gray-300 rounded-full flex items-center justify-center transition-all duration-200 shadow-sm hover:shadow-md group z-10"
+                aria-label="Close form"
+              >
+                <svg
+                  className="w-4 h-4 text-gray-600 group-hover:text-gray-800 transition-colors duration-200"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2.5}
+                    d="M6 18L18 6M6 6l12 12"
+                  />
+                </svg>
+              </button>
+            )}
+            
+            {/* Render the appropriate form */}
+            {type === "delete" && id ? (
+              <DeleteForm table={table} id={id} setOpen={setOpen} />
+            ) : type === "create" || type === "update" ? (
+              forms[table] ? (
+                forms[table](setOpen, type, data, relatedData)
+              ) : (
+                <div className="p-4 text-center text-red-600">
+                  Form not found for {table}!
+                </div>
+              )
+            ) : (
+              <div className="p-4 text-center text-red-600">
+                Invalid form type!
+              </div>
+            )}
           </div>
         </div>
       )}

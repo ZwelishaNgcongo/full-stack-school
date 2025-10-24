@@ -3,7 +3,7 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { createParent, updateParent } from "@/lib/actions";
-import { Dispatch, SetStateAction, useEffect } from "react";
+import { Dispatch, SetStateAction, useEffect, useState } from "react";
 import { toast } from "react-toastify";
 import { useFormState } from "react-dom";
 import { useRouter } from "next/navigation";
@@ -46,6 +46,169 @@ const InputField = ({
   </div>
 );
 
+// Searchable Student Select Component
+const StudentSearchSelect = ({
+  students,
+  register,
+  error,
+  defaultValue,
+  onChange,
+}: {
+  students: { id: string; name: string; surname: string; studentId: string }[];
+  register: any;
+  error?: any;
+  defaultValue?: string;
+  onChange?: (value: string) => void;
+}) => {
+  const [searchTerm, setSearchTerm] = useState<string>("");
+  const [selectedStudent, setSelectedStudent] = useState<any>(null);
+  const [showDropdown, setShowDropdown] = useState<boolean>(false);
+  const [filteredStudents, setFilteredStudents] = useState<{ id: string; name: string; surname: string; studentId: string }[]>(students);
+
+  // Initialize selected student if defaultValue exists
+  useEffect(() => {
+    if (defaultValue && students.length > 0) {
+      const student = students.find(s => s.studentId === defaultValue);
+      if (student) {
+        setSelectedStudent(student);
+        setSearchTerm(student.studentId);
+      }
+    }
+  }, [defaultValue, students]);
+
+  // Filter students based on search term
+  useEffect(() => {
+    if (!searchTerm.trim()) {
+      setFilteredStudents(students);
+      return;
+    }
+
+    const filtered = students.filter(student => 
+      student.studentId.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      student.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      student.surname.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+    
+    setFilteredStudents(filtered);
+  }, [searchTerm, students]);
+
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setSearchTerm(value);
+    setShowDropdown(true);
+    
+    // Clear selection if search term doesn't match selected student
+    if (selectedStudent && !value.includes(selectedStudent.studentId)) {
+      setSelectedStudent(null);
+      if (onChange) onChange("");
+    }
+  };
+
+  const handleStudentSelect = (student: any) => {
+    setSelectedStudent(student);
+    setSearchTerm(student.studentId);
+    setShowDropdown(false);
+    if (onChange) onChange(student.studentId);
+  };
+
+  const handleBlur = () => {
+    // Delay to allow click on dropdown item
+    setTimeout(() => {
+      setShowDropdown(false);
+    }, 200);
+  };
+
+  return (
+    <div className="relative">
+      <label className="block text-sm font-medium text-gray-700 mb-1">
+        Search Student by ID, Name, or Surname <span className="text-red-500">*</span>
+      </label>
+      
+      {/* Search Input */}
+      <input
+        type="text"
+        value={searchTerm}
+        onChange={handleSearchChange}
+        onFocus={() => setShowDropdown(true)}
+        onBlur={handleBlur}
+        placeholder="Type to search (e.g., STU001 or John)"
+        className="w-full p-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-indigo-400 transition text-base"
+      />
+
+      {/* Hidden input for form submission */}
+      <input
+        type="hidden"
+        {...register("studentId", { required: "Student selection is required" })}
+        value={selectedStudent?.studentId || ""}
+      />
+
+      {/* Selected Student Display */}
+      {selectedStudent && !showDropdown && (
+        <div className="mt-2 p-3 bg-green-50 border border-green-200 rounded-lg flex items-center justify-between">
+          <div>
+            <p className="text-sm font-medium text-green-800">
+              {selectedStudent.studentId}
+            </p>
+            <p className="text-xs text-green-600">
+              {selectedStudent.name} {selectedStudent.surname}
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              setSelectedStudent(null);
+              setSearchTerm("");
+              if (onChange) onChange("");
+            }}
+            className="text-red-500 hover:text-red-700 text-sm font-medium"
+          >
+            Clear
+          </button>
+        </div>
+      )}
+
+      {/* Dropdown Results */}
+      {showDropdown && searchTerm && (
+        <div className="absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+          {filteredStudents.length > 0 ? (
+            filteredStudents.map((student) => (
+              <button
+                key={student.studentId}
+                type="button"
+                onClick={() => handleStudentSelect(student)}
+                className="w-full text-left p-3 hover:bg-indigo-50 transition-colors border-b border-gray-100 last:border-b-0"
+              >
+                <p className="font-medium text-gray-900">{student.studentId}</p>
+                <p className="text-sm text-gray-600">
+                  {student.name} {student.surname}
+                </p>
+              </button>
+            ))
+          ) : (
+            <div className="p-4 text-center text-gray-500">
+              No students found matching &quot;{searchTerm}&quot;
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Error Message */}
+      {error?.message && (
+        <p className="text-xs text-red-500 mt-1">
+          {error.message.toString()}
+        </p>
+      )}
+
+      {/* Helper Text */}
+      {!selectedStudent && (
+        <p className="text-xs text-gray-500 mt-1">
+          Start typing a Student ID or name to search
+        </p>
+      )}
+    </div>
+  );
+};
+
 export default function ParentForm({
   type,
   data,
@@ -59,6 +222,7 @@ export default function ParentForm({
 }) {
   const {
     register,
+    setValue,
     formState: { errors },
   } = useForm<ParentSchema>({
     resolver: zodResolver(parentSchema),
@@ -118,14 +282,14 @@ export default function ParentForm({
           }
 
           // Build data object following StudentForm pattern
-          const dataObject: ParentSchema = {
+          const dataObject: any = {
             name: formData.get("name")?.toString()!,
             username: formData.get("username")?.toString()!,
             surname: formData.get("surname")?.toString()!,
             email: formData.get("email")?.toString() || "",
             phone: formData.get("phone")?.toString() || "",
             address: formData.get("address")?.toString() || "",
-            studentId: studentIdValue, // This will now be the custom studentId field
+            studentId: studentIdValue,
           };
 
           // Add ID for updates
@@ -166,26 +330,7 @@ export default function ParentForm({
           <h1 className="text-3xl font-extrabold text-indigo-700">
             {type === "create" ? "Add New Parent" : "Update Parent Information"}
           </h1>
-          <button
-            type="button"
-            onClick={handleClose}
-            className="flex-shrink-0 w-10 h-10 bg-gray-100 hover:bg-red-100 border border-gray-300 hover:border-red-400 rounded-full flex items-center justify-center transition-all duration-200 shadow-sm hover:shadow-md group"
-            aria-label="Close form"
-          >
-            <svg
-              className="w-5 h-5 text-gray-600 group-hover:text-red-500 transition-colors duration-200"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2.5}
-                d="M6 18L18 6M6 6l12 12"
-              />
-            </svg>
-          </button>
+       
         </div>
 
         {/* Hidden ID field for updates */}
@@ -270,29 +415,14 @@ export default function ParentForm({
             Student & Security Information
           </h2>
           <div className="space-y-4">
-            {/* Student Selection - Now using studentId */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Select Student <span className="text-red-500">*</span>
-              </label>
-              <select
-                className="w-full p-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-indigo-400 transition text-base"
-                {...register("studentId", { required: "Student selection is required" })}
-                defaultValue={data?.studentId || ""}
-              >
-                <option value="">Select a student</option>
-                {relatedData?.students?.map((student) => (
-                  <option key={student.studentId} value={student.studentId}>
-                    {student.studentId} - {student.name} {student.surname}
-                  </option>
-                ))}
-              </select>
-              {errors.studentId?.message && (
-                <p className="text-xs text-red-500 mt-1">
-                  {errors.studentId.message.toString()}
-                </p>
-              )}
-            </div>
+            {/* Searchable Student Selection */}
+            <StudentSearchSelect
+              students={relatedData?.students || []}
+              register={register}
+              error={errors.studentId}
+              defaultValue={data?.studentId}
+              onChange={(value) => setValue("studentId", value)}
+            />
 
             {/* Password field only for create */}
             {type === "create" && (

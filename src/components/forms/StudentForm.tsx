@@ -292,26 +292,7 @@ const StudentForm = ({
           <h1 className="text-3xl font-extrabold text-indigo-700">
             {type === "create" ? "Register New Student" : "Update Student"}
           </h1>
-          <button
-            type="button"
-            onClick={handleClose}
-            className="flex-shrink-0 w-10 h-10 bg-gray-100 hover:bg-red-100 border border-gray-300 hover:border-red-400 rounded-full flex items-center justify-center transition-all duration-200 shadow-sm hover:shadow-md group"
-            aria-label="Close form"
-          >
-            <svg
-              className="w-5 h-5 text-gray-600 group-hover:text-red-500 transition-colors duration-200"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2.5}
-                d="M6 18L18 6M6 6l12 12"
-              />
-            </svg>
-          </button>
+         
         </div>
 
         {/* Student Info */}
