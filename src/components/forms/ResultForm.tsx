@@ -95,21 +95,26 @@ const ResultForm = ({
     }
 
     if (assessmentType === "exam") {
-      // Filter exams where the student belongs to the class
-      const exams = (relatedData?.exams || []).filter(
-        (exam: any) =>
-          exam.lesson.class.students?.some((s: any) => s.id === selectedStudent.id)
-      );
+      // Filter exams where the student belongs to ANY of the exam's classes
+      // Note: Exams have a many-to-many relationship with lessons through ExamLesson
+      const exams = (relatedData?.exams || []).filter((exam: any) => {
+        // exam.lessons is an array of ExamLesson objects
+        return exam?.lessons?.some((examLesson: any) => 
+          examLesson?.lesson?.class?.students?.some((s: any) => s.id === selectedStudent.id)
+        );
+      });
+      
       setAvailableAssessments(exams);
-      setValue("examId", "");
+      setValue("examId", undefined);
     } else if (assessmentType === "assignment") {
       // Filter assignments where the student belongs to the class
-      const assignments = (relatedData?.assignments || []).filter(
-        (assignment: any) =>
-          assignment.lesson.class.students?.some((s: any) => s.id === selectedStudent.id)
+      // Note: Assignments have a direct relationship with one lesson
+      const assignments = (relatedData?.assignments || []).filter((assignment: any) =>
+        assignment?.lesson?.class?.students?.some((s: any) => s.id === selectedStudent.id)
       );
+      
       setAvailableAssessments(assignments);
-      setValue("assignmentId", "");
+      setValue("assignmentId", undefined);
     }
   }, [selectedStudent, assessmentType, relatedData, setValue]);
 
@@ -189,7 +194,7 @@ const ResultForm = ({
                 ))}
               </div>
             )}
-            {studentSearch && studentSearchResults.length === 0 && !isSearching && (
+            {studentSearch && studentSearchResults.length === 0 && !isSearching && !selectedStudent && (
               <p className="text-xs text-red-400 mt-1">No students found</p>
             )}
           </div>
@@ -235,11 +240,15 @@ const ResultForm = ({
               defaultValue={data?.examId || ""}
             >
               <option value="">Select an exam</option>
-              {availableAssessments.map((exam: any) => (
-                <option key={exam.id} value={exam.id}>
-                  {exam.title} - {exam.lesson.subject.name} ({exam.lesson.class.name})
-                </option>
-              ))}
+              {availableAssessments.map((exam: any) => {
+                // Get the first lesson's details for display (exams can have multiple lessons)
+                const firstLesson = exam.lessons?.[0]?.lesson;
+                return (
+                  <option key={exam.id} value={exam.id}>
+                    {exam.title} - {firstLesson?.subject?.name || "N/A"} ({firstLesson?.class?.name || "N/A"})
+                  </option>
+                );
+              })}
             </select>
             {availableAssessments.length === 0 && (
               <p className="text-xs text-orange-500">No exams available for this student</p>

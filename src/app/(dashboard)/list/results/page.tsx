@@ -7,7 +7,7 @@ import prisma from "@/lib/prisma";
 import { ITEM_PER_PAGE } from "@/lib/settings";
 import { Prisma } from "@prisma/client";
 import Image from "next/image";
-import ViewResults from "@/components/ViewResults"; // Add this import
+import ViewResults from "@/components/ViewResults";
 
 // ✅ Mock auth method
 async function getCurrentUser(): Promise<{ role: "admin" | "teacher" | "student" | "parent" | null; id?: string }> {
@@ -83,10 +83,19 @@ const ResultListPage = async ({
     }
   }
 
+  // FIXED: Updated role-based filters for exam many-to-many relationship
   switch (role) {
     case "teacher":
       query.OR = [
-        { exam: { lesson: { teacherId: currentUserId! } } },
+        { 
+          exam: { 
+            lessons: { 
+              some: { 
+                lesson: { teacherId: currentUserId! } 
+              } 
+            } 
+          } 
+        },
         { assignment: { lesson: { teacherId: currentUserId! } } },
       ];
       break;
@@ -102,13 +111,30 @@ const ResultListPage = async ({
     prisma.result.findMany({
       where: query,
       include: {
-        student: { select: { name: true, surname: true } },
+        student: { 
+          select: { 
+            name: true, 
+            surname: true,
+            class: { 
+              select: { 
+                name: true 
+              } 
+            } // ✅ FIXED: Include student's actual class
+          } 
+        },
         exam: {
-          include: {
-            lesson: {
-              select: {
-                class: { select: { name: true } },
-                teacher: { select: { name: true, surname: true } },
+          select: {
+            id: true,
+            title: true,
+            startTime: true,
+            lessons: {
+              take: 1, // Get first lesson for display (teacher info only)
+              include: {
+                lesson: {
+                  select: {
+                    teacher: { select: { name: true, surname: true } },
+                  },
+                },
               },
             },
           },
@@ -117,7 +143,6 @@ const ResultListPage = async ({
           include: {
             lesson: {
               select: {
-                class: { select: { name: true } },
                 teacher: { select: { name: true, surname: true } },
               },
             },
@@ -136,18 +161,44 @@ const ResultListPage = async ({
       if (!assessment) return null;
 
       const isExam = "startTime" in assessment;
+      
+      // Get student's actual class
+      const studentClass = (item.student as any).class?.name || "No Class";
 
-      return {
-        id: item.id,
-        title: assessment.title,
-        studentName: item.student.name,
-        studentSurname: item.student.surname,
-        teacherName: assessment.lesson.teacher.name,
-        teacherSurname: assessment.lesson.teacher.surname,
-        score: item.score,
-        className: assessment.lesson.class.name,
-        startTime: isExam ? assessment.startTime : assessment.startDate,
-      };
+      // FIXED: Handle exam data structure - use student's actual class
+      if (isExam && item.exam) {
+        const firstLesson = item.exam.lessons[0]?.lesson;
+        if (!firstLesson) return null;
+
+        return {
+          id: item.id,
+          title: item.exam.title,
+          studentName: item.student.name,
+          studentSurname: item.student.surname,
+          teacherName: firstLesson.teacher.name,
+          teacherSurname: firstLesson.teacher.surname,
+          score: item.score,
+          className: studentClass, // ✅ FIXED: Show student's actual class
+          startTime: item.exam.startTime,
+        };
+      }
+
+      // FIXED: Assignment handling - also use student's actual class
+      if (item.assignment) {
+        return {
+          id: item.id,
+          title: item.assignment.title,
+          studentName: item.student.name,
+          studentSurname: item.student.surname,
+          teacherName: item.assignment.lesson.teacher.name,
+          teacherSurname: item.assignment.lesson.teacher.surname,
+          score: item.score,
+          className: studentClass, // ✅ FIXED: Show student's actual class
+          startTime: item.assignment.startDate,
+        };
+      }
+
+      return null;
     })
     .filter(Boolean) as ResultList[];
 

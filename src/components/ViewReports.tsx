@@ -23,13 +23,15 @@ const ViewReports = ({ setOpen }: ViewReportsProps) => {
 
     setIsSearching(true);
     
-    // Navigate to the reports view page with the student ID and optional term filter
-    const params = new URLSearchParams({ studentId: studentId.trim() });
+    // Navigate to the reports view page with the student ID as a dynamic route
+    // and optional term filter as a query param
+    let url = `/list/reports/view/${studentId.trim()}`;
+    
     if (selectedTerm) {
-      params.append("term", selectedTerm);
+      url += `?term=${selectedTerm}`;
     }
     
-    router.push(`/list/reports/view?${params.toString()}`);
+    router.push(url);
     
     // Close the modal after navigation
     if (setOpen) {

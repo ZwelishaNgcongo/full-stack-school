@@ -136,22 +136,7 @@ const AssignmentForm = ({ type, data, setOpen, relatedData }: AssignmentFormProp
       <div className="fixed -top-20 -right-20 w-64 h-64 bg-gradient-to-br from-purple-400 via-pink-400 to-red-400 rounded-full opacity-10 blur-3xl pointer-events-none"></div>
       <div className="fixed -bottom-20 -left-20 w-64 h-64 bg-gradient-to-tr from-blue-400 via-purple-400 to-pink-400 rounded-full opacity-10 blur-3xl pointer-events-none"></div>
 
-      {/* Close button - stays fixed at top */}
-      <button
-        type="button"
-        onClick={() => setOpen?.(false)}
-        className="absolute top-0 right-0 w-10 h-10 bg-gradient-to-br from-gray-50 to-white hover:from-red-50 hover:to-red-100 border-2 border-gray-200 hover:border-red-300 rounded-full flex items-center justify-center transition-all duration-300 shadow-lg hover:shadow-xl group z-50 hover:scale-110"
-        aria-label="Close form"
-      >
-        <svg
-          className="w-5 h-5 text-gray-600 group-hover:text-red-500 group-hover:rotate-90 transition-all duration-300"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-        >
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />
-        </svg>
-      </button>
+      
 
       <form className="flex flex-col h-full relative" onSubmit={onSubmit}>
         {/* Header - fixed at top */}

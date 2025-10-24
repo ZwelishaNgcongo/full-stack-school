@@ -1,4 +1,4 @@
-// app/list/reports/view/page.tsx
+// app/list/reports/view/[studentId]/page.tsx
 import Image from "next/image";
 import prisma from "@/lib/prisma";
 import { notFound } from "next/navigation";
@@ -16,7 +16,7 @@ type TermReport = {
 };
 
 async function getStudentReports(studentId: string, termFilter?: string) {
-  // Find the student by their studentId field - FIXED: Added id to select
+  // Find the student by their studentId field
   const student = await prisma.student.findFirst({
     where: { 
       OR: [
@@ -25,13 +25,13 @@ async function getStudentReports(studentId: string, termFilter?: string) {
       ]
     },
     select: {
-      id: true, // ADDED
+      id: true,
       name: true,
       surname: true,
       studentId: true,
       class: {
         select: {
-          id: true, // ADDED
+          id: true,
           name: true,
         },
       },
@@ -117,28 +117,14 @@ async function getStudentReports(studentId: string, termFilter?: string) {
 }
 
 export default async function StudentReportsViewPage({
+  params,
   searchParams,
 }: {
-  searchParams: { studentId?: string; term?: string };
+  params: { studentId: string };
+  searchParams: { term?: string };
 }) {
-  const { studentId, term } = searchParams;
-
-  if (!studentId) {
-    return (
-      <div className="flex-1 p-4 flex items-center justify-center">
-        <div className="text-center">
-          <Image src="/noData.png" alt="" width={100} height={100} className="mx-auto opacity-50" />
-          <p className="text-gray-500 mt-4">Please enter a student ID to view reports</p>
-          <Link
-            href="/list/reports"
-            className="mt-4 inline-block bg-lamaPurple text-white py-2 px-4 rounded-lg hover:bg-opacity-90"
-          >
-            Go to Reports
-          </Link>
-        </div>
-      </div>
-    );
-  }
+  const { studentId } = params;
+  const { term } = searchParams;
 
   const data = await getStudentReports(studentId, term);
 

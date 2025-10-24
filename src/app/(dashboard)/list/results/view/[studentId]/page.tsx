@@ -48,16 +48,25 @@ async function getStudentResults(studentId: string) {
       studentId: student.id,
     },
     include: {
+      // FIXED: Updated exam include for many-to-many relationship
       exam: {
-        include: {
-          lesson: {
+        select: {
+          id: true,
+          title: true,
+          startTime: true,
+          lessons: {
+            take: 1, // Get first lesson for display
             include: {
-              subject: true,
-              class: true,
-              teacher: {
-                select: {
-                  name: true,
-                  surname: true,
+              lesson: {
+                include: {
+                  subject: true,
+                  class: true,
+                  teacher: {
+                    select: {
+                      name: true,
+                      surname: true,
+                    },
+                  },
                 },
               },
             },
@@ -94,17 +103,40 @@ async function getStudentResults(studentId: string) {
 
       const isExam = "startTime" in assessment;
 
-      return {
-        id: result.id,
-        score: result.score,
-        type: isExam ? "Exam" as const : "Assignment" as const,
-        title: assessment.title,
-        subject: assessment.lesson.subject.name,
-        className: assessment.lesson.class.name,
-        teacher: `${assessment.lesson.teacher.name} ${assessment.lesson.teacher.surname}`,
-        date: isExam ? assessment.startTime : assessment.startDate,
-        maxScore: 100,
-      };
+      // FIXED: Handle exam data with lessons array
+      if (isExam && result.exam) {
+        const firstLesson = result.exam.lessons[0]?.lesson;
+        if (!firstLesson) return null;
+
+        return {
+          id: result.id,
+          score: result.score,
+          type: "Exam" as const,
+          title: result.exam.title,
+          subject: firstLesson.subject.name,
+          className: firstLesson.class.name,
+          teacher: `${firstLesson.teacher.name} ${firstLesson.teacher.surname}`,
+          date: result.exam.startTime,
+          maxScore: 100,
+        };
+      }
+
+      // Assignment handling remains the same
+      if (result.assignment) {
+        return {
+          id: result.id,
+          score: result.score,
+          type: "Assignment" as const,
+          title: result.assignment.title,
+          subject: result.assignment.lesson.subject.name,
+          className: result.assignment.lesson.class.name,
+          teacher: `${result.assignment.lesson.teacher.name} ${result.assignment.lesson.teacher.surname}`,
+          date: result.assignment.startDate,
+          maxScore: 100,
+        };
+      }
+
+      return null;
     })
     .filter(Boolean) as StudentResult[];
 
@@ -150,7 +182,6 @@ export default async function StudentResultsViewPage({
         href="/list/results"
         className="flex items-center gap-2 text-gray-600 hover:text-gray-900 w-fit"
       >
-       
         <span className="font-medium">Back to Results</span>
       </Link>
 
@@ -201,7 +232,7 @@ export default async function StudentResultsViewPage({
               <p className="text-2xl font-bold text-gray-800 mt-1">{avgScore}%</p>
             </div>
             <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
-            
+              {/* Icon placeholder */}
             </div>
           </div>
         </div>

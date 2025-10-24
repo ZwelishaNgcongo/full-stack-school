@@ -230,8 +230,36 @@ const FormContainer = async ({ table, type, data, id, relatedData: externalRelat
         break;
       
       case "report":
-        relatedData = {};
-        break;
+  // Fetch all subjects with their lessons, classes, and students
+  const reportSubjects = await prisma.subject.findMany({
+    select: {
+      id: true,
+      name: true,
+      lessons: {
+        select: {
+          id: true,
+          class: {
+            select: {
+              id: true,
+              name: true,
+              students: {
+                select: {
+                  id: true,
+                  studentId: true,
+                  name: true,
+                  surname: true,
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+    orderBy: { name: "asc" },
+  });
+  
+  relatedData = { subjects: reportSubjects };
+  break;
     }
   }
 
