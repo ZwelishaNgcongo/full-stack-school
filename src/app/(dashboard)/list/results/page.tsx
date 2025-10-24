@@ -1,4 +1,4 @@
-// ...imports
+// app/list/results/page.tsx
 import FormContainer from "@/components/FormContainer";
 import Pagination from "@/components/Pagination";
 import Table from "@/components/Table";
@@ -9,9 +9,9 @@ import { Prisma } from "@prisma/client";
 import Image from "next/image";
 import ViewResults from "@/components/ViewResults";
 
-// ✅ Mock auth method
+// Mock auth method
 async function getCurrentUser(): Promise<{ role: "admin" | "teacher" | "student" | "parent" | null; id?: string }> {
-  return { role: "admin", id: "user_123" }; // for testing purposes
+  return { role: "admin", id: "user_123" };
 }
 
 type ResultList = {
@@ -31,7 +31,6 @@ const ResultListPage = async ({
 }: {
   searchParams: { [key: string]: string | undefined };
 }) => {
-  // ✅ Use mocked auth
   const { role, id: currentUserId } = await getCurrentUser();
 
   const columns = [
@@ -63,27 +62,41 @@ const ResultListPage = async ({
     </tr>
   );
 
-  const { page, ...queryParams } = searchParams;
+  const { page, search, ...queryParams } = searchParams;
   const p = page ? parseInt(page) || 1 : 1;
 
   const query: Prisma.ResultWhereInput = {};
 
+  // Handle search parameter
+  if (search) {
+    const trimmedSearch = search.trim();
+    
+    if (trimmedSearch) {
+      console.log('🔍 Results search query:', trimmedSearch);
+      
+      query.OR = [
+        { exam: { title: { contains: trimmedSearch, mode: "insensitive" } } },
+        { assignment: { title: { contains: trimmedSearch, mode: "insensitive" } } },
+        { student: { studentId: { contains: trimmedSearch, mode: "insensitive" } } },
+        { student: { username: { contains: trimmedSearch, mode: "insensitive" } } },
+        { student: { name: { contains: trimmedSearch, mode: "insensitive" } } },
+        { student: { surname: { contains: trimmedSearch, mode: "insensitive" } } },
+      ];
+    }
+  }
+
+  // Handle other query params
   for (const [key, value] of Object.entries(queryParams)) {
     if (!value) continue;
+    
     switch (key) {
       case "studentId":
         query.studentId = value;
         break;
-      case "search":
-        query.OR = [
-          { exam: { title: { contains: value, mode: "insensitive" } } },
-          { student: { name: { contains: value, mode: "insensitive" } } },
-        ];
-        break;
     }
   }
 
-  // FIXED: Updated role-based filters for exam many-to-many relationship
+  // Role-based filtering
   switch (role) {
     case "teacher":
       query.OR = [
@@ -107,6 +120,8 @@ const ResultListPage = async ({
       break;
   }
 
+  console.log('🔍 Final results query:', JSON.stringify(query, null, 2));
+
   const [dataRes, count] = await prisma.$transaction([
     prisma.result.findMany({
       where: query,
@@ -115,11 +130,13 @@ const ResultListPage = async ({
           select: { 
             name: true, 
             surname: true,
+            studentId: true,
+            username: true,
             class: { 
               select: { 
                 name: true 
               } 
-            } // ✅ FIXED: Include student's actual class
+            }
           } 
         },
         exam: {
@@ -128,7 +145,7 @@ const ResultListPage = async ({
             title: true,
             startTime: true,
             lessons: {
-              take: 1, // Get first lesson for display (teacher info only)
+              take: 1,
               include: {
                 lesson: {
                   select: {
@@ -155,17 +172,16 @@ const ResultListPage = async ({
     prisma.result.count({ where: query }),
   ]);
 
+  console.log(`🔍 Search for "${search}" returned ${count} result(s)`);
+
   const data = dataRes
     .map((item) => {
       const assessment = item.exam || item.assignment;
       if (!assessment) return null;
 
       const isExam = "startTime" in assessment;
-      
-      // Get student's actual class
       const studentClass = (item.student as any).class?.name || "No Class";
 
-      // FIXED: Handle exam data structure - use student's actual class
       if (isExam && item.exam) {
         const firstLesson = item.exam.lessons[0]?.lesson;
         if (!firstLesson) return null;
@@ -178,12 +194,11 @@ const ResultListPage = async ({
           teacherName: firstLesson.teacher.name,
           teacherSurname: firstLesson.teacher.surname,
           score: item.score,
-          className: studentClass, // ✅ FIXED: Show student's actual class
+          className: studentClass,
           startTime: item.exam.startTime,
         };
       }
 
-      // FIXED: Assignment handling - also use student's actual class
       if (item.assignment) {
         return {
           id: item.id,
@@ -193,7 +208,7 @@ const ResultListPage = async ({
           teacherName: item.assignment.lesson.teacher.name,
           teacherSurname: item.assignment.lesson.teacher.surname,
           score: item.score,
-          className: studentClass, // ✅ FIXED: Show student's actual class
+          className: studentClass,
           startTime: item.assignment.startDate,
         };
       }
