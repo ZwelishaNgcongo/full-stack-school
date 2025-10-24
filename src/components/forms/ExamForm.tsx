@@ -83,9 +83,11 @@ const ExamForm = ({
 
   const { lessons } = relatedData || {};
 
-  // Group lessons by grade
+  // FIXED: Group lessons by grade level from grade.level instead of class.gradeId
   const lessonsByGrade = lessons?.reduce((acc: any, lesson: any) => {
-    const gradeLevel = lesson.class?.gradeId;
+    // Get the actual grade level from the grade object
+    const gradeLevel = lesson.class?.grade?.level;
+    
     if (gradeLevel !== undefined && gradeLevel !== null) {
       const gradeName = gradeLevel === 0 ? "Grade R" : `Grade ${gradeLevel}`;
       if (!acc[gradeName]) {
@@ -127,17 +129,6 @@ const ExamForm = ({
 
   return (
     <div className="relative max-h-[85vh] overflow-y-auto">
-      {/* Close Button */}
-      <button
-        type="button"
-        onClick={() => setOpen(false)}
-        className="absolute -top-3 -right-3 w-10 h-10 bg-white hover:bg-red-50 border-2 border-gray-200 hover:border-red-300 rounded-full flex items-center justify-center transition-all shadow-lg group z-10"
-      >
-        <svg className="w-5 h-5 text-gray-600 group-hover:text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />
-        </svg>
-      </button>
-
       <form className="flex flex-col gap-6 p-1" onSubmit={onSubmit}>
         {/* Header */}
         <div className="flex items-center gap-4 pb-6 border-b-2">

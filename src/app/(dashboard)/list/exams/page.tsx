@@ -20,7 +20,11 @@ type ExamWithDetails = {
     lesson: {
       subject: { name: string };
       teacher: { name: string; surname: string };
-      class: { name: string; gradeId: number };
+      class: { 
+        name: string; 
+        gradeId: number;
+        grade: { level: number }; // ADDED: Include grade level
+      };
     };
   }[];
 };
@@ -36,7 +40,13 @@ async function getExams(query: any, p: number): Promise<[ExamWithDetails[], numb
               select: {
                 subject: { select: { name: true } },
                 teacher: { select: { name: true, surname: true } },
-                class: { select: { name: true, gradeId: true } },
+                class: { 
+                  select: { 
+                    name: true, 
+                    gradeId: true,
+                    grade: { select: { level: true } } // ADDED: Get actual grade level
+                  } 
+                },
               },
             },
           },
@@ -61,7 +71,8 @@ async function getLessons() {
       class: { 
         select: { 
           name: true,
-          gradeId: true
+          gradeId: true,
+          grade: { select: { level: true } } // ADDED: Get actual grade level
         } 
       },
     },
@@ -170,16 +181,23 @@ const ExamListPage = async ({ searchParams }: ExamListPageProps) => {
     // Get unique subjects
     const subjects = [...new Set(item.lessons.map(el => el.lesson.subject.name))];
     
-    // Group classes by grade
+    // Group classes by grade - FIXED: Use grade.level instead of gradeId
     const classesByGrade = item.lessons.reduce((acc: any, el) => {
-      const gradeId = el.lesson.class.gradeId;
-      const gradeName = gradeId === 0 ? "Grade R" : `Grade ${gradeId}`;
+      const gradeLevel = el.lesson.class.grade.level; // FIXED: Get level from grade object
+      const gradeName = gradeLevel === 0 ? "Grade R" : `Grade ${gradeLevel}`;
       if (!acc[gradeName]) {
         acc[gradeName] = [];
       }
       acc[gradeName].push(el.lesson.class.name);
       return acc;
     }, {});
+
+    // Sort grade names properly
+    const sortedGrades = Object.keys(classesByGrade).sort((a, b) => {
+      const aNum = a === "Grade R" ? 0 : parseInt(a.replace("Grade ", ""));
+      const bNum = b === "Grade R" ? 0 : parseInt(b.replace("Grade ", ""));
+      return aNum - bNum;
+    });
 
     return (
       <tr key={item.id} className="border-b border-gray-200 even:bg-slate-50 text-sm hover:bg-lamaPurpleLight">
@@ -197,18 +215,18 @@ const ExamListPage = async ({ searchParams }: ExamListPageProps) => {
         </td>
         <td>
           <div className="flex flex-col gap-2">
-            {Object.entries(classesByGrade).map(([grade, classes]: [string, any]) => (
+            {sortedGrades.map((grade) => (
               <div key={grade} className="flex flex-col">
                 <span className="text-xs font-semibold text-gray-600 mb-1">{grade}</span>
                 <div className="flex flex-wrap gap-1">
-                  {classes.slice(0, 3).map((className: string, idx: number) => (
+                  {classesByGrade[grade].slice(0, 3).map((className: string, idx: number) => (
                     <span key={idx} className="px-2 py-1 bg-blue-100 text-blue-700 rounded text-xs">
                       {className}
                     </span>
                   ))}
-                  {classes.length > 3 && (
+                  {classesByGrade[grade].length > 3 && (
                     <span className="px-2 py-1 bg-gray-100 text-gray-600 rounded text-xs">
-                      +{classes.length - 3} more
+                      +{classesByGrade[grade].length - 3} more
                     </span>
                   )}
                 </div>
