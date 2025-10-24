@@ -1750,3 +1750,205 @@ export const deleteReport = async (currentState: CurrentState, data: FormData) =
     return { success: false, error: true };
   }
 };
+
+/* ------------------- EVENTS ------------------- */
+
+export const createEvent = async (currentState: CurrentState, formData: FormData) => {
+  try {
+    console.log("=== CREATE EVENT START ===");
+
+    const title = formData.get("title") as string;
+    const description = formData.get("description") as string;
+    const startTime = new Date(formData.get("startTime") as string);
+    const endTime = new Date(formData.get("endTime") as string);
+    const classIdStr = formData.get("classId") as string;
+    const classId = classIdStr && classIdStr !== "" ? Number(classIdStr) : null;
+
+    console.log("Parsed data:", { title, description, startTime, endTime, classId });
+
+    // Validate required fields
+    if (!title || !startTime || !endTime) {
+      console.error("Missing required fields");
+      return { success: false, error: true };
+    }
+
+    // Validate times
+    if (endTime <= startTime) {
+      console.error("End time must be after start time");
+      return { success: false, error: true };
+    }
+
+    // If classId is provided, verify class exists
+    if (classId) {
+      const classExists = await prisma.class.findUnique({
+        where: { id: classId },
+      });
+
+      if (!classExists) {
+        console.error("Class not found:", classId);
+        return { success: false, error: true };
+      }
+    }
+
+    // Create the event
+    const eventData: any = {
+      title,
+      startTime,
+      endTime,
+    };
+
+    if (description && description.trim() !== "") {
+      eventData.description = description;
+    }
+
+    if (classId !== null) {
+      eventData.classId = classId;
+    }
+
+    const createdEvent = await prisma.event.create({
+      data: eventData,
+    });
+
+    console.log("Event created successfully:", createdEvent.id);
+    console.log("=== CREATE EVENT END ===");
+
+    revalidatePath("/list/events");
+    revalidatePath("/admin");
+    revalidatePath("/teacher");
+    revalidatePath("/student");
+    revalidatePath("/parent");
+    return { success: true, error: false };
+  } catch (err) {
+    console.error("=== CREATE EVENT ERROR ===");
+    console.error("Error:", err);
+    if (err instanceof Error) {
+      console.error("Error message:", err.message);
+      console.error("Error stack:", err.stack);
+    }
+    return { success: false, error: true };
+  }
+};
+
+export const updateEvent = async (currentState: CurrentState, formData: FormData) => {
+  try {
+    console.log("=== UPDATE EVENT START ===");
+
+    const id = Number(formData.get("id"));
+    const title = formData.get("title") as string;
+    const description = formData.get("description") as string;
+    const startTime = new Date(formData.get("startTime") as string);
+    const endTime = new Date(formData.get("endTime") as string);
+    const classIdStr = formData.get("classId") as string;
+    const classId = classIdStr && classIdStr !== "" ? Number(classIdStr) : null;
+
+    console.log("Parsed data:", { id, title, description, startTime, endTime, classId });
+
+    if (!id || !title || !startTime || !endTime) {
+      console.error("Missing required fields");
+      return { success: false, error: true };
+    }
+
+    // Check if event exists
+    const existingEvent = await prisma.event.findUnique({
+      where: { id },
+    });
+
+    if (!existingEvent) {
+      console.error("Event not found:", id);
+      return { success: false, error: true };
+    }
+
+    // Validate times
+    if (endTime <= startTime) {
+      console.error("End time must be after start time");
+      return { success: false, error: true };
+    }
+
+    // If classId is provided, verify class exists
+    if (classId) {
+      const classExists = await prisma.class.findUnique({
+        where: { id: classId },
+      });
+
+      if (!classExists) {
+        console.error("Class not found:", classId);
+        return { success: false, error: true };
+      }
+    }
+
+    // Update the event
+    const updateData: any = {
+  title,
+  startTime,
+  endTime,
+};
+
+if (description && description.trim() !== "") {
+  updateData.description = description;
+} else {
+  updateData.description = null;
+}
+
+if (classId !== null) {
+  updateData.classId = classId;
+} else {
+  updateData.classId = null;
+}
+
+const updatedEvent = await prisma.event.update({
+  where: { id },
+  data: updateData,
+});
+
+    console.log("Event updated successfully:", updatedEvent.id);
+    console.log("=== UPDATE EVENT END ===");
+
+    revalidatePath("/list/events");
+    revalidatePath("/admin");
+    revalidatePath("/teacher");
+    revalidatePath("/student");
+    revalidatePath("/parent");
+    return { success: true, error: false };
+  } catch (err) {
+    console.error("=== UPDATE EVENT ERROR ===");
+    console.error("Error:", err);
+    if (err instanceof Error) {
+      console.error("Error message:", err.message);
+      console.error("Error stack:", err.stack);
+    }
+    return { success: false, error: true };
+  }
+};
+
+export const deleteEvent = async (currentState: CurrentState, data: FormData) => {
+  const id = Number(data.get("id"));
+  
+  try {
+    console.log("Deleting event:", id);
+
+    const eventExists = await prisma.event.findUnique({
+      where: { id },
+    });
+
+    if (!eventExists) {
+      console.error("Event not found:", id);
+      return { success: false, error: true };
+    }
+
+    await prisma.event.delete({
+      where: { id },
+    });
+
+    console.log("Event deleted successfully:", id);
+    
+    revalidatePath("/list/events");
+    revalidatePath("/admin");
+    revalidatePath("/teacher");
+    revalidatePath("/student");
+    revalidatePath("/parent");
+    return { success: true, error: false };
+  } catch (err) {
+    console.error("deleteEvent error:", err);
+    return { success: false, error: true };
+  }
+};

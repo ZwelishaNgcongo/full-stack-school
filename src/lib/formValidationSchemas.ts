@@ -171,3 +171,22 @@ export const reportSchema = z.object({
 
 export type ReportSchema = z.infer<typeof reportSchema>;
 
+// Event Schema - UPDATED
+export const eventSchema = z.object({
+  id: z.coerce.number().optional(),
+  title: z.string().min(1, { message: "Title is required!" }),
+  description: z.string().optional(),
+  startTime: z.string().min(1, { message: "Start time is required!" }),
+  endTime: z.string().min(1, { message: "End time is required!" }),
+  gradeId: z.coerce.number().optional(), // Changed from classId to gradeId
+}).refine((data) => {
+  // Ensure end time is after start time
+  const start = new Date(data.startTime);
+  const end = new Date(data.endTime);
+  return end > start;
+}, {
+  message: "End time must be after start time",
+  path: ["endTime"],
+});
+
+export type EventSchema = z.infer<typeof eventSchema>;

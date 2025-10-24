@@ -23,10 +23,8 @@ const Navbar = async () => {
 
       {/* User Section */}
       <div className="flex items-center gap-6">
-        {/* Message Icon */}
-        <Link href="/list/messages" className="relative flex items-center justify-center bg-white border border-gray-200 rounded-full w-9 h-9 shadow hover:shadow-md transition hover:bg-gray-100">
-          <Image src="/message.png" alt="Messages" width={18} height={18} />
-        </Link>
+        
+       
 
         {/* Announcement Icon */}
         <Link href="/list/announcements" className="relative flex items-center justify-center bg-white border border-gray-200 rounded-full w-9 h-9 shadow hover:shadow-md transition hover:bg-gray-100">

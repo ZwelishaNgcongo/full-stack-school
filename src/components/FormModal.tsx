@@ -10,6 +10,7 @@ import {
   deleteLesson,
   deleteAssignment,
   deleteResult,
+  deleteEvent,
 } from "@/lib/actions";
 import dynamic from "next/dynamic";
 import Image from "next/image";
@@ -29,7 +30,6 @@ type TableType =
   | "lesson"
   | "assignment"
   | "result"
-  | "attendance"
   | "event"
   | "announcement"
   | "report";
@@ -44,8 +44,7 @@ const deleteActionMap: Record<string, any> = {
   lesson: deleteLesson,
   assignment: deleteAssignment,
   result: deleteResult,
-  attendance: deleteSubject,
-  event: deleteSubject,
+  event: deleteEvent,
   announcement: deleteSubject,
   report: deleteSubject,
 };
@@ -81,6 +80,9 @@ const ResultForm = dynamic(() => import("./forms/ResultForm"), {
 const ReportForm = dynamic(() => import("./ReportForm"), {
   loading: () => <h1>Loading...</h1>,
 });
+const EventForm = dynamic(() => import("./forms/EventForm"), {
+  loading: () => <h1>Loading...</h1>,
+});
 
 const forms: Record<
   string,
@@ -101,6 +103,14 @@ const forms: Record<
   ),
   class: (setOpen, type, data, relatedData) => (
     <ClassForm
+      type={type}
+      data={data}
+      setOpen={setOpen}
+      relatedData={relatedData}
+    />
+  ),
+  event: (setOpen, type, data, relatedData) => (
+    <EventForm
       type={type}
       data={data}
       setOpen={setOpen}

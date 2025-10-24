@@ -1,6 +1,5 @@
 import UserCard from "@/components/UserCard";
 import CountChartContainer from "@/components/CountChartContainer";
-import AttendanceChartContainer from "@/components/AttendanceChartContainer";
 import EventCalendarContainer from "@/components/EventCalendarContainer";
 import Announcements from "@/components/Announcements";
 
@@ -28,10 +27,7 @@ export default function DashboardPage({ searchParams = {} }: DashboardPageProps)
             <CountChartContainer />
           </div>
 
-          {/* ATTENDANCE CHART */}
-          <div className="w-full lg:w-2/3 h-[450px]">
-            <AttendanceChartContainer />
-          </div>
+          
         </div>
       </div>
 

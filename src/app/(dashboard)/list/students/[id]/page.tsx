@@ -2,7 +2,6 @@ import Announcements from "@/components/Announcements";
 import BigCalendarContainer from "@/components/BigCalendarContainer";
 import FormContainer from "@/components/FormContainer";
 import Performance from "@/components/Performance";
-import StudentAttendanceCard from "@/components/StudentAttendanceCard";
 import prisma from "@/lib/prisma";
 import { Class, Student } from "@prisma/client";
 import Image from "next/image";
@@ -111,7 +110,7 @@ const SingleStudentPage = async ({
                 className="w-6 h-6"
               />
               <Suspense fallback="loading...">
-                <StudentAttendanceCard id={student.id} />
+                
               </Suspense>
             </div>
             
