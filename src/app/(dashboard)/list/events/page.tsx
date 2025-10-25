@@ -15,6 +15,21 @@ async function getCurrentUser(): Promise<{ role: "admin" | "teacher" | "student"
 
 type EventList = Event & { grade: Grade | null };
 
+// Get count of active events (ongoing + upcoming)
+async function getActiveEventsCount() {
+  const now = new Date();
+  
+  const count = await prisma.event.count({
+    where: {
+      endTime: {
+        gte: now, // Events that haven't ended yet
+      },
+    },
+  });
+  
+  return count;
+}
+
 const EventListPage = async ({
   searchParams,
 }: {
@@ -165,7 +180,7 @@ const EventListPage = async ({
     }
   }
 
-  const [data, count] = await prisma.$transaction([
+  const [data, count, activeCount] = await prisma.$transaction([
     prisma.event.findMany({
       where: query,
       include: {
@@ -178,6 +193,14 @@ const EventListPage = async ({
       skip: ITEM_PER_PAGE * (p - 1),
     }),
     prisma.event.count({ where: query }),
+    // Get active events count
+    prisma.event.count({
+      where: {
+        endTime: {
+          gte: new Date(),
+        },
+      },
+    }),
   ]);
 
   return (
@@ -189,10 +212,15 @@ const EventListPage = async ({
           <div className="flex items-center gap-4 self-end">
             <Link
               href="/list/events/view"
-              className="px-4 py-2 bg-lamaPurple text-white rounded-md hover:bg-lamaPurpleLight transition-colors font-medium flex items-center gap-2"
+              className="relative px-4 py-2 bg-lamaPurple text-white rounded-md hover:bg-lamaPurpleLight transition-colors font-medium flex items-center gap-2"
             >
               <Image src="/calendar.png" alt="" width={16} height={16} />
               View Events
+              {activeCount > 0 && (
+                <span className="absolute -top-2 -right-2 flex items-center justify-center min-w-[20px] h-5 px-1.5 bg-red-500 text-white text-xs font-bold rounded-full animate-pulse shadow-lg">
+                  {activeCount}
+                </span>
+              )}
             </Link>
             <button className="w-8 h-8 flex items-center justify-center rounded-full bg-lamaYellow">
               <Image src="/filter.png" alt="" width={14} height={14} />

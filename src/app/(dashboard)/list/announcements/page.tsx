@@ -41,6 +41,22 @@ async function getClasses() {
   });
 }
 
+// Get count of active announcements (today + upcoming)
+async function getActiveAnnouncementsCount() {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  
+  const count = await prisma.announcement.count({
+    where: {
+      date: {
+        gte: today,
+      },
+    },
+  });
+  
+  return count;
+}
+
 interface AnnouncementListPageProps {
   searchParams: { [key: string]: string | undefined };
 }
@@ -67,6 +83,7 @@ const AnnouncementListPage = async ({ searchParams }: AnnouncementListPageProps)
 
   const [data, count] = await getAnnouncements(query, p);
   const classes = await getClasses();
+  const activeCount = await getActiveAnnouncementsCount();
 
   const columns = [
     { header: "Title", accessor: "title" },
@@ -151,12 +168,17 @@ const AnnouncementListPage = async ({ searchParams }: AnnouncementListPageProps)
           <div className="flex items-center gap-4 self-end">
             <Link
               href="/list/announcements/view"
-              className="px-4 py-2 bg-lamaPurple text-white rounded-md hover:bg-lamaPurpleLight transition-colors font-medium flex items-center gap-2"
+              className="relative px-4 py-2 bg-lamaPurple text-white rounded-md hover:bg-lamaPurpleLight transition-colors font-medium flex items-center gap-2"
             >
               <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
                 <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/>
               </svg>
               View Announcements
+              {activeCount > 0 && (
+                <span className="absolute -top-2 -right-2 flex items-center justify-center min-w-[20px] h-5 px-1.5 bg-red-500 text-white text-xs font-bold rounded-full animate-pulse shadow-lg">
+                  {activeCount}
+                </span>
+              )}
             </Link>
             <button className="w-8 h-8 flex items-center justify-center rounded-full bg-lamaYellow">
               <Image src="/filter.png" alt="" width={14} height={14} />
