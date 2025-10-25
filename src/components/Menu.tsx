@@ -6,7 +6,7 @@ const menuItems = [
   {
     title: "MENU",
     items: [
-      { icon: "/home.png", label: "Home", href: "/", visible: ["admin", "teacher", "student", "parent"] },
+      { icon: "/home.png", label: "Home", href: "/admin", visible: ["admin", "teacher", "student", "parent"] },
       { icon: "/teacher.png", label: "Teachers", href: "/list/teachers", visible: ["admin", "teacher"] },
       { icon: "/student.png", label: "Students", href: "/list/students", visible: ["admin", "teacher"] },
       { icon: "/parent.png", label: "Parents", href: "/list/parents", visible: ["admin", "teacher"] },
@@ -21,7 +21,6 @@ const menuItems = [
       { icon: "/announcement.png", label: "Announcements", href: "/list/announcements", visible: ["admin", "teacher", "student", "parent"] },
     ],
   },
-  
 ];
 
 // Mock user role

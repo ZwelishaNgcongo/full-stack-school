@@ -1952,3 +1952,130 @@ export const deleteEvent = async (currentState: CurrentState, data: FormData) =>
     return { success: false, error: true };
   }
 };
+
+/* ------------------- ANNOUNCEMENT ------------------- */
+
+export const createAnnouncement = async (
+  currentState: { success: boolean; error: boolean },
+  formData: FormData
+) => {
+  try {
+    console.log("=== CREATE ANNOUNCEMENT START ===");
+    
+    const title = formData.get("title") as string;
+    const description = formData.get("description") as string;
+    const date = new Date(formData.get("date") as string);
+    const classIdStr = formData.get("classId") as string;
+    const classId = classIdStr && classIdStr !== "" ? Number(classIdStr) : null;
+
+    console.log("Received data:", { title, description, date, classId });
+
+    await prisma.announcement.create({
+      data: {
+        title,
+        description,
+        date,
+        classId,
+      },
+    });
+
+    console.log("Announcement created successfully");
+    console.log("=== CREATE ANNOUNCEMENT END ===");
+
+    revalidatePath("/list/announcements");
+    revalidatePath("/list/announcements/view");
+    return { success: true, error: false };
+  } catch (err) {
+    console.error("=== CREATE ANNOUNCEMENT ERROR ===");
+    console.error("Error:", err);
+    return { success: false, error: true };
+  }
+};
+
+export const updateAnnouncement = async (
+  currentState: { success: boolean; error: boolean },
+  formData: FormData
+) => {
+  try {
+    console.log("=== UPDATE ANNOUNCEMENT START ===");
+    
+    const id = Number(formData.get("id"));
+    const title = formData.get("title") as string;
+    const description = formData.get("description") as string;
+    const date = new Date(formData.get("date") as string);
+    const classIdStr = formData.get("classId") as string;
+    const classId = classIdStr && classIdStr !== "" ? Number(classIdStr) : null;
+
+    console.log("Received data:", { id, title, description, date, classId });
+
+    if (!id || isNaN(id)) {
+      console.error("Invalid announcement ID");
+      return { success: false, error: true };
+    }
+
+    const existingAnnouncement = await prisma.announcement.findUnique({
+      where: { id },
+    });
+
+    if (!existingAnnouncement) {
+      console.error("Announcement not found:", id);
+      return { success: false, error: true };
+    }
+
+    console.log("Found existing announcement:", existingAnnouncement);
+
+    await prisma.announcement.update({
+      where: { id },
+      data: {
+        title,
+        description,
+        date,
+        classId,
+      },
+    });
+
+    console.log("Announcement updated successfully:", id);
+    console.log("=== UPDATE ANNOUNCEMENT END ===");
+
+    revalidatePath("/list/announcements");
+    revalidatePath("/list/announcements/view");
+    return { success: true, error: false };
+  } catch (err) {
+    console.error("=== UPDATE ANNOUNCEMENT ERROR ===");
+    console.error("Error:", err);
+    return { success: false, error: true };
+  }
+};
+
+export const deleteAnnouncement = async (
+  currentState: { success: boolean; error: boolean },
+  data: FormData
+) => {
+  const id = Number(data.get("id"));
+  
+  try {
+    console.log("Deleting announcement:", id);
+
+    const announcementExists = await prisma.announcement.findUnique({
+      where: { id },
+    });
+
+    if (!announcementExists) {
+      console.error("Announcement not found:", id);
+      return { success: false, error: true };
+    }
+
+    await prisma.announcement.delete({
+      where: { id },
+    });
+
+    console.log("Announcement deleted successfully:", id);
+    
+    revalidatePath("/list/announcements");
+    revalidatePath("/list/announcements/view");
+    return { success: true, error: false };
+  } catch (err) {
+    console.error("deleteAnnouncement error:", err);
+    return { success: false, error: true };
+  }
+};

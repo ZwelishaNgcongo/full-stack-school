@@ -1,4 +1,4 @@
-import Announcements from "@/components/Announcements";
+
 import BigCalendarContainer from "@/components/BigCalendarContainer";
 
 interface TeacherPageProps {
@@ -21,7 +21,7 @@ const TeacherPage = ({ searchParams }: TeacherPageProps) => {
       </div>
       {/* RIGHT */}
       <div className="w-full xl:w-1/3 flex flex-col gap-8">
-        <Announcements />
+       
       </div>
     </div>
   );

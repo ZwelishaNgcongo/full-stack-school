@@ -11,6 +11,8 @@ import {
   deleteAssignment,
   deleteResult,
   deleteEvent,
+  deleteAnnouncement, // ✅ ADDED
+  deleteReport, // ✅ ADDED if you have this
 } from "@/lib/actions";
 import dynamic from "next/dynamic";
 import Image from "next/image";
@@ -45,8 +47,8 @@ const deleteActionMap: Record<string, any> = {
   assignment: deleteAssignment,
   result: deleteResult,
   event: deleteEvent,
-  announcement: deleteSubject,
-  report: deleteSubject,
+  announcement: deleteAnnouncement, // ✅ FIXED - Now using the correct action
+  report: deleteReport, // ✅ FIXED - Using proper delete action
 };
 
 // USE LAZY LOADING
@@ -83,6 +85,9 @@ const ReportForm = dynamic(() => import("./ReportForm"), {
 const EventForm = dynamic(() => import("./forms/EventForm"), {
   loading: () => <h1>Loading...</h1>,
 });
+const AnnouncementForm = dynamic(() => import("./forms/AnnouncementForm"), {
+  loading: () => <h1>Loading...</h1>,
+});
 
 const forms: Record<
   string,
@@ -111,6 +116,14 @@ const forms: Record<
   ),
   event: (setOpen, type, data, relatedData) => (
     <EventForm
+      type={type}
+      data={data}
+      setOpen={setOpen}
+      relatedData={relatedData}
+    />
+  ),
+  announcement: (setOpen, type, data, relatedData) => (
+    <AnnouncementForm
       type={type}
       data={data}
       setOpen={setOpen}
