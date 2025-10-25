@@ -23,7 +23,7 @@ type ExamWithDetails = {
       class: { 
         name: string; 
         gradeId: number;
-        grade: { level: number }; // ADDED: Include grade level
+        grade: { level: number };
       };
     };
   }[];
@@ -44,7 +44,7 @@ async function getExams(query: any, p: number): Promise<[ExamWithDetails[], numb
                   select: { 
                     name: true, 
                     gradeId: true,
-                    grade: { select: { level: true } } // ADDED: Get actual grade level
+                    grade: { select: { level: true } }
                   } 
                 },
               },
@@ -72,7 +72,7 @@ async function getLessons() {
         select: { 
           name: true,
           gradeId: true,
-          grade: { select: { level: true } } // ADDED: Get actual grade level
+          grade: { select: { level: true } }
         } 
       },
     },
@@ -181,9 +181,9 @@ const ExamListPage = async ({ searchParams }: ExamListPageProps) => {
     // Get unique subjects
     const subjects = [...new Set(item.lessons.map(el => el.lesson.subject.name))];
     
-    // Group classes by grade - FIXED: Use grade.level instead of gradeId
+    // Group classes by grade
     const classesByGrade = item.lessons.reduce((acc: any, el) => {
-      const gradeLevel = el.lesson.class.grade.level; // FIXED: Get level from grade object
+      const gradeLevel = el.lesson.class.grade.level;
       const gradeName = gradeLevel === 0 ? "Grade R" : `Grade ${gradeLevel}`;
       if (!acc[gradeName]) {
         acc[gradeName] = [];
@@ -256,19 +256,37 @@ const ExamListPage = async ({ searchParams }: ExamListPageProps) => {
 
   return (
     <div className="bg-white p-4 rounded-md flex-1 m-4 mt-0">
+      {/* Exam View Banner - Following assignment style */}
+      <div className="mb-6 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 rounded-2xl p-6 shadow-xl">
+        <div className="flex flex-col md:flex-row items-center justify-between gap-4">
+          <div className="flex items-center gap-4">
+            <div className="w-14 h-14 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center">
+              <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+              </svg>
+            </div>
+            <div className="text-white">
+              <h3 className="text-xl font-bold">View Exam Timetable</h3>
+              <p className="text-sm text-white/90">Browse exams organized by grade and class</p>
+            </div>
+          </div>
+          <Link 
+            href="/list/exams/view"
+            className="px-6 py-3 bg-white text-indigo-600 rounded-xl font-bold shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 flex items-center gap-2 whitespace-nowrap"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+            </svg>
+            View Timetable
+          </Link>
+        </div>
+      </div>
+
+      {/* Existing content */}
       <div className="flex items-center justify-between">
         <h1 className="hidden md:block text-lg font-semibold">All Exams</h1>
         <div className="flex flex-col md:flex-row items-center gap-4 w-full md:w-auto">
           <TableSearch />
-          <Link
-            href="/list/exams/view"
-            className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-indigo-500 to-purple-500 text-white rounded-xl hover:from-indigo-600 hover:to-purple-600 transition-all font-semibold shadow-md"
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-            </svg>
-            View Timetable
-          </Link>
           {(role === "admin" || role === "teacher") && (
             <FormContainer table="exam" type="create" relatedData={{ lessons }} />
           )}

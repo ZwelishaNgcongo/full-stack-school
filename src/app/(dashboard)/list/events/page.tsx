@@ -1,4 +1,3 @@
-// app/list/events/page.tsx
 import FormContainer from "@/components/FormContainer";
 import Pagination from "@/components/Pagination";
 import Table from "@/components/Table";
@@ -14,21 +13,6 @@ async function getCurrentUser(): Promise<{ role: "admin" | "teacher" | "student"
 }
 
 type EventList = Event & { grade: Grade | null };
-
-// Get count of active events (ongoing + upcoming)
-async function getActiveEventsCount() {
-  const now = new Date();
-  
-  const count = await prisma.event.count({
-    where: {
-      endTime: {
-        gte: now, // Events that haven't ended yet
-      },
-    },
-  });
-  
-  return count;
-}
 
 const EventListPage = async ({
   searchParams,
@@ -205,23 +189,43 @@ const EventListPage = async ({
 
   return (
     <div className="bg-white p-4 rounded-md flex-1 m-4 mt-0">
+      {/* Event View Banner - Following assignment and exam style */}
+      <div className="mb-6 bg-gradient-to-r from-orange-500 via-pink-500 to-purple-500 rounded-2xl p-6 shadow-xl">
+        <div className="flex flex-col md:flex-row items-center justify-between gap-4">
+          <div className="flex items-center gap-4">
+            <div className="w-14 h-14 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center">
+              <svg className="w-8 h-8 text-white" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M19 4h-1V2h-2v2H8V2H6v2H5c-1.11 0-1.99.9-1.99 2L3 20c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 16H5V10h14v10z"/>
+              </svg>
+            </div>
+            <div className="text-white">
+              <h3 className="text-xl font-bold">View School Events Calendar</h3>
+              <p className="text-sm text-white/90">Browse all upcoming and past school events</p>
+            </div>
+          </div>
+          <Link 
+            href="/list/events/view"
+            className="relative px-6 py-3 bg-white text-orange-600 rounded-xl font-bold shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 flex items-center gap-2 whitespace-nowrap"
+          >
+            <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+              <path d="M19 4h-1V2h-2v2H8V2H6v2H5c-1.11 0-1.99.9-1.99 2L3 20c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 16H5V10h14v10z"/>
+            </svg>
+            View Calendar
+            {activeCount > 0 && (
+              <span className="absolute -top-2 -right-2 flex items-center justify-center min-w-[20px] h-5 px-1.5 bg-red-500 text-white text-xs font-bold rounded-full animate-pulse shadow-lg">
+                {activeCount}
+              </span>
+            )}
+          </Link>
+        </div>
+      </div>
+
+      {/* Existing content */}
       <div className="flex items-center justify-between">
         <h1 className="hidden md:block text-lg font-semibold">All Events</h1>
         <div className="flex flex-col md:flex-row items-center gap-4 w-full md:w-auto">
           <TableSearch />
           <div className="flex items-center gap-4 self-end">
-            <Link
-              href="/list/events/view"
-              className="relative px-4 py-2 bg-lamaPurple text-white rounded-md hover:bg-lamaPurpleLight transition-colors font-medium flex items-center gap-2"
-            >
-              <Image src="/calendar.png" alt="" width={16} height={16} />
-              View Events
-              {activeCount > 0 && (
-                <span className="absolute -top-2 -right-2 flex items-center justify-center min-w-[20px] h-5 px-1.5 bg-red-500 text-white text-xs font-bold rounded-full animate-pulse shadow-lg">
-                  {activeCount}
-                </span>
-              )}
-            </Link>
             <button className="w-8 h-8 flex items-center justify-center rounded-full bg-lamaYellow">
               <Image src="/filter.png" alt="" width={14} height={14} />
             </button>
